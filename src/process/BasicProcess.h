@@ -5,7 +5,7 @@
 #include <string>
 
 
-#include "../../src/model/Molecule.h"
+#include "network_model/Network.h"
 
 using namespace std;
 
@@ -13,18 +13,16 @@ class BasicProcess{
 public:
     BasicProcess(string);
     ~BasicProcess();
-    
+
 private:
     void loadConfigurationFile();
-    void loadMolecule();
-    
-    string mConfigurationFile;
-    string mMoleculeFile;
-    
-    Molecule mMolecule;
-    
-    double mSpringCutoffLength;
-    
+    void loadNetworkModel();
+
+    string  mConfigurationFile;
+    string  mInputFile;
+
+    Network mNetworkModel;
+
 };
 
 #endif
