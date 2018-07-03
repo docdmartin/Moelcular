@@ -58,7 +58,6 @@ void BasicProcess::loadNetworkModel() {
   CSVRead network_file;
 
   /*=================================================
-  Identify number of atoms in the molecule
   */
   if(!network_file.OpenCSVFile(mInputFile))
   throw "Unable to open network file";
@@ -90,7 +89,6 @@ void BasicProcess::loadNetworkModel() {
 
 
   /*=================================================
-  Save the atoms as nodes to the molecule
   */
   if(!network_file.OpenCSVFile(mInputFile))
   throw "Unable to open molecular file";
