@@ -63,7 +63,7 @@ void BasicProcess::loadNetworkModel() {
   throw "Unable to open network file";
 
   vector<string> network_columns;
-  int x_index   = static_cast<int>(network_columns.size()); network_columns.push_back("X" );
+  int x_index   = static_cast<int>(network_columns.size()); network_columns.push_back("X");
 
   if(!network_file.ReadCSVHeader(network_columns)) {
     throw "Network file didn't have correct column headers";
@@ -90,7 +90,7 @@ void BasicProcess::loadNetworkModel() {
 
   /*=================================================
   */
-  if(!network_file.OpenCSVFile(mInputFile))
+  if(!network_file.OpenCSVFile(mInputFile)) /* DAN - WHY IS THIS HERE? ISN'T THIS DONE ABOVE ALREADY ONCE? (2018-07-14)*/
   throw "Unable to open molecular file";
 
   int y_index       = static_cast<int>(network_columns.size()); network_columns.push_back("Y");

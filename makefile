@@ -1,5 +1,7 @@
 CC=g++
-CFLAGS=-c -std=c++11 -Wall -Isrc
+#CFLAGS=-c -std=c++11 -Wall -Isrc
+# DEBUG
+CFLAGS=-g -c -std=c++11 -Wall -Isrc
 LDFLAGS=
 HEADER = src/util/Common.h
 SOURCES=main.cpp \
@@ -11,7 +13,7 @@ SOURCES=main.cpp \
 
 OBJECTS=$(SOURCES:.cpp=.o)
 
-EXECUTABLE=raam
+EXECUTABLE=molecular
 
 all: $(SOURCES) $(EXECUTABLE)
 
@@ -22,4 +24,4 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(CFLAGS) $< -O -o $@
 
 clean:
-	rm raam $(OBJECTS)
+	rm molecular $(OBJECTS)
