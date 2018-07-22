@@ -12,16 +12,9 @@ namespace CommonEnum {
   };
 
   enum NodeType{
-    C_ALPHA,
+    ALPHA_CARBON,
     AUXILIARY
   };
 }
-/*
-enum class ConnectionType{
-  NO_CONNECTION,
-  SPRING_LEVEL_1,
-  SPRING_LEVEL_2,
-  WATER
-};
-*/
+
 #endif

@@ -12,13 +12,17 @@ using namespace std;
 Connection::Connection(Node& n1, Node& n2, CommonEnum::ConnectionType ct) :
 mNode1(n1), mNode2(n2), mConnectionType(ct)
 {
-  mSeparation      = n1.GetSeparationVector(n2);
+  // mSeparation is vector pointing from mNode1 to mNode2
+  mSeparation      = mNode1.GetSeparationVector(mNode2);
+
+  // mSquaredDistance length of mSeparation squared
   mSquaredDistance = mSeparation[0]*mSeparation[0]
                    + mSeparation[1]*mSeparation[1]
                    + mSeparation[2]*mSeparation[2];
 
-  mNode1.AddConnection(ct, n2.GetID());
-  mNode2.AddConnection(ct, n1.GetID());
+  // Notify nodes of new connection
+  mNode1.AddConnection(ct, mNode2.GetID());
+  mNode2.AddConnection(ct, mNode1.GetID());
 }
 
 Connection::~Connection(){

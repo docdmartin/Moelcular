@@ -1,3 +1,3 @@
 ParameterName,ParameterValue
 MaxSpringLength,1.00
-MolecularFileName,Hydrocarbon.txt
+ProteinFolderName,database/lys

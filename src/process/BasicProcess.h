@@ -11,15 +11,18 @@ using namespace std;
 
 class BasicProcess{
 public:
-    BasicProcess(string);
+    BasicProcess(string, string);
     ~BasicProcess();
 
 private:
     void loadConfigurationFile();
     void loadNetworkModel();
+    void loadAminoAcid(string, string);
 
     string  mConfigurationFile;
-    string  mInputFile;
+    string  mPathName;
+
+    string  mInputFolder;
 
     Network mNetworkModel;
 
