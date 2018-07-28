@@ -1,3 +1,3 @@
 ParameterName,ParameterValue
-MaxSpringLength,1.00
+MaxSpringLength,4.00
 ProteinFolderName,database/lys

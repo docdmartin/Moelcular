@@ -22,6 +22,7 @@ struct coord {
 
 
 Network::Network() {
+  mMaxSpringLength  = 1.0;
   mEstimateNodeType = CommonEnum::NodeType::ALPHA_CARBON;
 }
 
@@ -44,6 +45,23 @@ int Network::AddNode(
         cout << "Unable to construct node for residual #" << amino_id << " (" << amino_name << ")" << endl;
         return -1;
     }
+
+    voxelizeNode();
+
+    if( mAABB[X_INDEX][MIN_INDEX] > mPosX )
+        mAABB[X_INDEX][MIN_INDEX] = mPosX;
+    if( mAABB[X_INDEX][MAX_INDEX] < mPosX )
+        mAABB[X_INDEX][MAX_INDEX] = mPosX;
+
+    if( mAABB[Y_INDEX][MIN_INDEX] > mPosY )
+        mAABB[Y_INDEX][MIN_INDEX] = mPosY;
+    if( mAABB[Y_INDEX][MAX_INDEX] < mPosY )
+        mAABB[Y_INDEX][MAX_INDEX] = mPosY;
+
+    if( mAABB[Z_INDEX][MIN_INDEX] > mPosZ )
+        mAABB[Z_INDEX][MIN_INDEX] = mPosZ;
+    if( mAABB[Z_INDEX][MAX_INDEX] < mPosZ )
+        mAABB[Z_INDEX][MAX_INDEX] = mPosZ;
 
     mNodes.push_back(
       Node(
@@ -123,17 +141,86 @@ void Network::addConnection(CommonEnum::ConnectionType connType, Node& n1, Node&
 }
 
 
-void Network::IdentifyContacts( double cutoff ) {
+void Network::IdentifyContacts() {
+  map<int, map<int, map<int, vector<int> > > >::iterator xit = mNodeVoxels.begin();
+  map<         int, map<int, vector<int> >   >::iterator yit;
+  map<                  int, vector<int>     >::iterator zit;
 
+  for(; xit != mNodeVoxels.end(); ++xit) {
+    for(yit = xit->second.begin(); yit != xit->second.end(); ++yit) {
+      for(zit = yit->second.begin(); zit != yit->second.end(); ++zit) {
+        
+      }
+    }
+  }
+}
+
+void Network::voxelizeNode() {
+  int x_index = floor( mPosX / mMaxSpringLength );
+  int y_index = floor( mPosY / mMaxSpringLength );
+  int z_index = floor( mPosZ / mMaxSpringLength );
+
+  int node_index = static_cast<int>( mNodes.size() );
+
+  map<int, map<int, map<int, vector<int> > > >::iterator xit = mNodeVoxels.find(x_index);
+  if(xit == mNodeVoxels.end()) {
+    vector<int>                       n_index;
+    map<int, vector<int> >            zmap;
+    map<int, map<int, vector<int> > > ymap;
+
+    n_index.push_back( node_index );
+    zmap[z_index]        = n_index;
+    ymap[y_index]        = zmap;
+    mNodeVoxels[x_index] = ymap;
+
+    return;
+  }
+
+  map<int, map<int, vector<int> > >::iterator yit = xit->second.find(y_index);
+  if(yit == xit->second.end()) {
+    vector<int>                       n_index;
+    map<int, vector<int> >            zmap;
+
+    n_index.push_back( node_index );
+    zmap[z_index]        = n_index;
+    xit->second.insert(pair<int, map<int, vector<int> >  >(y_index, zmap));
+
+    return;
+  }
+
+  map<int, vector<int> >::iterator zit = yit->second.find(z_index);
+  if(zit == yit->second.end()) {
+    vector<int> n_index;
+
+    n_index.push_back( node_index );
+    yit->second.insert(pair<int, vector<int> >(z_index, n_index));
+
+    return;
+  }
+
+  zit->second.push_back( node_index );
 }
 
 
 void Network::Print() {
+  cout << "Nodes" << endl;
   for(auto node : mNodes)
     node.Print();
-/*
+
+  cout << "Connections" << endl;
   for(map<CommonEnum::ConnectionType, vector<Connection>>::iterator it = mConnections.begin(); it != mConnections.end(); ++it)
     for(auto conn : it->second)
       conn.Print();
-      */
+
+  cout << "Voxels" << endl;
+  map<int, map<int, map<int, vector<int> > > >::iterator xit = mNodeVoxels.begin();
+  map<         int, map<int, vector<int> >   >::iterator yit;
+  map<                  int, vector<int>     >::iterator zit;
+  for(; xit != mNodeVoxels.end(); ++xit) {
+    for(yit = xit->second.begin(); yit != xit->second.end(); ++yit) {
+      for(zit = yit->second.begin(); zit != yit->second.end(); ++zit) {
+        cout << "Voxel (" << xit->first << ", " << yit->first << ", " << zit->first << ") has " << zit->second.size() << " nodes" << endl;
+      }
+    }
+  }
 }

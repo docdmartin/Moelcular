@@ -17,6 +17,7 @@ BasicProcess::BasicProcess(string filename, string pathname) :
 
     loadNetworkModel();
 
+    mNetworkModel.Print();
 }
 
 
@@ -48,6 +49,10 @@ void BasicProcess::loadConfigurationFile(){
 
         if(fields[param_name_index].compare("ProteinFolderName") == 0)
             mInputFolder = mPathName + fields[param_value_index];
+        if(fields[param_name_index].compare("MaxSpringLength") == 0) {
+            double maxSpringLength = atof( fields[param_value_index].c_str() );
+            mNetworkModel.SetMaxSpringLength( maxSpringLength );
+        }
 
         cout << "Parameter: " << fields[param_name_index] << ", has value: " << fields[param_value_index] << endl;
 	}
@@ -194,7 +199,5 @@ void BasicProcess::loadAminoAcid(string input_file, string chain_name) {
     if(prev_node_index >= 0)
       mNetworkModel.CreateBackboneConnection(prev_node_index, node_index);
   }
-
-  mNetworkModel.Print();
 
 }
