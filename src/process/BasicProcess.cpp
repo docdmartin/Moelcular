@@ -12,9 +12,12 @@ BasicProcess::BasicProcess(string filename, string pathname) :
   mConfigurationFile( filename ),
   mPathName(pathname)
 {
+    mMaxIndex = 0;
 
+    // Step #1: Configuration
     loadConfigurationFile();
 
+    // Step #2: Construction
     loadNetworkModel();
 
     mNetworkModel.Print();
@@ -79,14 +82,30 @@ void BasicProcess::loadNetworkModel() {
 
       string chain = tmpFileName.substr(proteinName.size()+1, tmpFileName.size() - proteinName.size() - 5);
 
+      countAminoAcid(mInputFolder + "/" + tmpFileName, chain);
+    }
+    closedir (dir);
+
+    /* print all the files and directories within directory */
+    dir = opendir (mInputFolder.c_str());
+    while ((ent = readdir (dir)) != NULL) {
+      string tmpFileName = ent->d_name;
+
+      if (tmpFileName.compare(0, proteinName.size(), proteinName))
+        continue;
+
+      string chain = tmpFileName.substr(proteinName.size()+1, tmpFileName.size() - proteinName.size() - 5);
+
       loadAminoAcid(mInputFolder + "/" + tmpFileName, chain);
     }
     closedir (dir);
+
   }
 
+  mNetworkModel.IdentifyContacts();
 }
 
-void BasicProcess::loadAminoAcid(string input_file, string chain_name) {
+void BasicProcess::countAminoAcid(string input_file, string chain_name) {
 
   cout << "Loading " << chain_name << " from file: " << input_file << endl;
 
@@ -102,7 +121,6 @@ void BasicProcess::loadAminoAcid(string input_file, string chain_name) {
     throw "Network file didn't have correct column headers";
   }
 
-  int max_index = 0;
   while(true) {
     vector<string> fields = network_file.ReadCSVRecord();
     if(fields.size() == 0) {
@@ -113,31 +131,35 @@ void BasicProcess::loadAminoAcid(string input_file, string chain_name) {
     if(fields[name_index].compare("CA") != 0)
       continue;
 
-    ++max_index;
+    ++mMaxIndex;
   }
 
-  if(max_index <= 0)
+}
+
+void BasicProcess::loadAminoAcid(string input_file, string chain_name) {
+
+  cout << "Loading " << chain_name << " from file: " << input_file << endl;
+
+  CSVRead network_file;
+
+  if(mMaxIndex <= 0)
   throw "No nodes";
 
-  cout << input_file << " contains a total of " << max_index << " alpha carbons." << endl;
-  mNetworkModel.AllocateNodes(max_index);
+  cout << input_file << " contains a total of " << mMaxIndex << " alpha carbons." << endl;
+  mNetworkModel.AllocateNodes(mMaxIndex);
 
-
-
-
-
-
-  if(!network_file.OpenCSVFile(input_file))
-  throw "Unable to open molecular file";
-
-  int x_index   = static_cast<int>(network_columns.size()); network_columns.push_back("X");
-  int y_index   = static_cast<int>(network_columns.size()); network_columns.push_back("Y");
-  int z_index   = static_cast<int>(network_columns.size()); network_columns.push_back("Z");
-  int q_index   = static_cast<int>(network_columns.size()); network_columns.push_back("Q");
-
+  vector<string> network_columns;
+  int name_index     = static_cast<int>(network_columns.size()); network_columns.push_back("ATOMNAME" );
+  int x_index        = static_cast<int>(network_columns.size()); network_columns.push_back("X");
+  int y_index        = static_cast<int>(network_columns.size()); network_columns.push_back("Y");
+  int z_index        = static_cast<int>(network_columns.size()); network_columns.push_back("Z");
+  int q_index        = static_cast<int>(network_columns.size()); network_columns.push_back("Q");
   int atom_id_index  = static_cast<int>(network_columns.size()); network_columns.push_back("ID");
   int resid_index    = static_cast<int>(network_columns.size()); network_columns.push_back("RESID");
   int res_name_index = static_cast<int>(network_columns.size()); network_columns.push_back("RESNAME");
+
+  if(!network_file.OpenCSVFile(input_file))
+  throw "Unable to open molecular file";
 
   if(!network_file.ReadCSVHeader(network_columns)) {
     throw "Molecular file didn't have correct column headers";

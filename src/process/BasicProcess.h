@@ -18,7 +18,9 @@ private:
     void loadConfigurationFile();
     void loadNetworkModel();
     void loadAminoAcid(string, string);
+    void countAminoAcid(string, string);
 
+    int     mMaxIndex;
     string  mConfigurationFile;
     string  mPathName;
 

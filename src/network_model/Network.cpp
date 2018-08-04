@@ -23,6 +23,7 @@ struct coord {
 
 Network::Network() {
   mMaxSpringLength  = 1.0;
+  mMaxRangeSq       = mMaxSpringLength * mMaxSpringLength;
   mEstimateNodeType = CommonEnum::NodeType::ALPHA_CARBON;
 }
 
@@ -142,16 +143,91 @@ void Network::addConnection(CommonEnum::ConnectionType connType, Node& n1, Node&
 
 
 void Network::IdentifyContacts() {
-  map<int, map<int, map<int, vector<int> > > >::iterator xit = mNodeVoxels.begin();
+  map<int, map<int, map<int, vector<int> > > >::iterator xit;
   map<         int, map<int, vector<int> >   >::iterator yit;
   map<                  int, vector<int>     >::iterator zit;
 
-  for(; xit != mNodeVoxels.end(); ++xit) {
-    for(yit = xit->second.begin(); yit != xit->second.end(); ++yit) {
+  map<int, map<int, map<int, vector<int> > > >::iterator xiter;
+  map<         int, map<int, vector<int> >   >::iterator yiter;
+  map<                  int, vector<int>     >::iterator ziter;
+
+  int pri_vector_index;
+  for(    xit = mNodeVoxels.begin(); xit != mNodeVoxels.end(); ++xit) {
+    for(  yit = xit->second.begin(); yit != xit->second.end(); ++yit) {
       for(zit = yit->second.begin(); zit != yit->second.end(); ++zit) {
-        
+        for(int ii = 0; ii < static_cast<int>(zit->second.size()); ++ii) {
+          pri_vector_index = zit->second.at(ii);
+
+          // Look in same voxel
+          //   only look forward since node behind pri_vector_index have already been tested
+          for(int iii = ii+1; iii < static_cast<int>(zit->second.size()); ++iii) {
+            testConnection(pri_vector_index, zit->second.at(iii));
+          }
+
+          // need to check for same x, y but z + 1
+          ziter = yit->second.find( zit->first + 1 );
+          if(ziter != yit->second.end()) {
+            for(int iii = 0; iii < static_cast<int>(ziter->second.size()); ++iii) {
+              testConnection(pri_vector_index, ziter->second.at(iii));
+            }
+          }
+
+          // need to check for same x but y + 1 and z-1, z, z+1
+          yiter = xit->second.find( yit->first + 1 );
+          if(yiter != xit->second.end()) {
+            for(int z_cnt = -1; z_cnt <= 1; ++z_cnt) {
+              ziter = yiter->second.find( zit->first + z_cnt );
+              if(ziter == yiter->second.end())
+                continue;
+
+              for(int iii = 0; iii < static_cast<int>(ziter->second.size()); ++iii) {
+                testConnection(pri_vector_index, ziter->second.at(iii));
+              }
+            }
+          }
+
+          // need to check for x+1, y-1, y, y+1, z-1, z, z+1
+          xiter = mNodeVoxels.find( xit->first + 1 );
+          if(xiter != mNodeVoxels.end()) {
+            for(int y_cnt = -1; y_cnt <= 1; ++y_cnt) {
+              yiter = xiter->second.find( yit->first + y_cnt );
+              if(yiter == xiter->second.end())
+                continue;
+
+              for(int z_cnt = -1; z_cnt <= 1; ++z_cnt) {
+                ziter = yiter->second.find( zit->first + z_cnt );
+                if(ziter == yiter->second.end())
+                  continue;
+
+                for(int iii = 0; iii < static_cast<int>(ziter->second.size()); ++iii) {
+                  testConnection(pri_vector_index, ziter->second.at(iii));
+                }
+              }
+            }
+          }
+        }
       }
     }
+  }
+}
+
+void Network::testConnection(int p_index, int s_index) {
+  // if nodes are already linked then continue to next node
+  if( mNodes[p_index].IsConnected(s_index, CommonEnum::ConnectionType::ALL_CONNECTION) )
+    return;
+
+  // range suare test
+  // mSeparation is vector pointing from mNode1 to mNode2
+  vector<double> seperation = mNodes[p_index].GetSeparationVector(mNodes[s_index]);
+
+  // mSquaredDistance length of mSeparation squared
+  double squared_distance = seperation[0]*seperation[0]
+                   + seperation[1]*seperation[1]
+                   + seperation[2]*seperation[2];
+
+  // if pass test then create secondary link
+  if(squared_distance < mMaxRangeSq) {
+    addConnection(CommonEnum::ConnectionType::SPRING_LEVEL_2, mNodes[p_index], mNodes[s_index]);
   }
 }
 
@@ -207,10 +283,14 @@ void Network::Print() {
   for(auto node : mNodes)
     node.Print();
 
+    return;
+
   cout << "Connections" << endl;
   for(map<CommonEnum::ConnectionType, vector<Connection>>::iterator it = mConnections.begin(); it != mConnections.end(); ++it)
     for(auto conn : it->second)
       conn.Print();
+
+return;
 
   cout << "Voxels" << endl;
   map<int, map<int, map<int, vector<int> > > >::iterator xit = mNodeVoxels.begin();

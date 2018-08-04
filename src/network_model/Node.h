@@ -48,6 +48,7 @@ private:
 
     // Maps a connection type to a set of node IDs this node is connected to
     map< CommonEnum::ConnectionType, set<int> > mConnections;
+    // set<int> nodeIds = mConnections[CommonEnum::ConnectionType::SPRING_LEVEL_1];
 };
 
 #endif

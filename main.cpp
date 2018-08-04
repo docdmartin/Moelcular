@@ -17,6 +17,7 @@ int main(int argc,char **argv)
     m(1,1) = m(1,0) + m(0,1);
     cout << m << endl;
 
+
     if(argc == 1){
         cout << "Configuration file must be included on command line." << endl;
         cout << "> " << argv[0] << " pathname/filename" << endl;

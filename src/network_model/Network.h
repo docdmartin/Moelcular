@@ -24,7 +24,7 @@ public:
     Network();
     ~Network();
 
-    void SetMaxSpringLength( double m ) { mMaxSpringLength = m; }
+    void SetMaxSpringLength( double m ) { mMaxSpringLength = m; mMaxRangeSq = m*m; }
 
     void AllocateNodes(int s) { mNodes.reserve(s); }
 
@@ -40,10 +40,12 @@ public:
 
 private:
     void addConnection(CommonEnum::ConnectionType, Node&, Node&);
+    void testConnection(int, int );
     bool calculateNodeProperties(vector<string>&, vector<double>&, vector<double>&, vector<double>&, vector<double>&);
     void voxelizeNode();
 
     double                                              mMaxSpringLength;
+    double                                              mMaxRangeSq;
     CommonEnum::NodeType                                mEstimateNodeType;
     vector<Node>                                        mNodes;
     map<CommonEnum::ConnectionType, vector<Connection>> mConnections;

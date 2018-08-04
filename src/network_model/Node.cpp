@@ -66,6 +66,16 @@ void Node::AddConnection(CommonEnum::ConnectionType ct, int id) {
 }
 
 bool Node::IsConnected(int id, CommonEnum::ConnectionType ct) {
+
+  if(ct == CommonEnum::ConnectionType::ALL_CONNECTION) {
+    for ( int enumInt = CommonEnum::ConnectionType::NO_CONNECTION + 1; enumInt != CommonEnum::ConnectionType::ALL_CONNECTION; ++enumInt ) {
+      bool tmp = IsConnected(id, static_cast<CommonEnum::ConnectionType>(enumInt));
+      if(tmp)
+        return true;
+    }
+    return false;
+  }
+
   map< CommonEnum::ConnectionType, set<int> >::iterator it = mConnections.find(ct);
   if(it == mConnections.end())
     return false;
