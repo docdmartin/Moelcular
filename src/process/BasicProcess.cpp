@@ -140,17 +140,10 @@ void BasicProcess::loadAminoAcid(string input_file, string chain_name) {
 
   cout << "Loading " << chain_name << " from file: " << input_file << endl;
 
-<<<<<<< HEAD
-  /*=================================================
-  */
-  if(!network_file.OpenCSVFile(mInputFile)) /* DAN - WHY IS THIS HERE? ISN'T THIS DONE ABOVE ALREADY ONCE? (2018-07-14)*/
-  throw "Unable to open molecular file";
-=======
   CSVRead network_file;
 
   if(mMaxIndex <= 0)
   throw "No nodes";
->>>>>>> mnelson
 
   cout << input_file << " contains a total of " << mMaxIndex << " alpha carbons." << endl;
   mNetworkModel.AllocateNodes(mMaxIndex);
