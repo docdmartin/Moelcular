@@ -3,25 +3,22 @@
 
 
 namespace CommonEnum {
+  /*
+    ConnectionType must has NO_CONNECTION specified as the first in a list of enum
+    and ALL_CONNECTION as the last. This is important since we iterate over the enum list at times
+  */
   enum ConnectionType
   {
     NO_CONNECTION,
     SPRING_LEVEL_1,
     SPRING_LEVEL_2,
-    WATER
+    ALL_CONNECTION
   };
 
   enum NodeType{
-    C_ALPHA,
+    ALPHA_CARBON,
     AUXILIARY
   };
 }
-/*
-enum class ConnectionType{
-  NO_CONNECTION,
-  SPRING_LEVEL_1,
-  SPRING_LEVEL_2,
-  WATER
-};
-*/
+
 #endif
