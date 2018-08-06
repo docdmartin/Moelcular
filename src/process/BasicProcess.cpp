@@ -106,31 +106,51 @@ void BasicProcess::loadNetworkModel() {
 }
 
 void BasicProcess::countAminoAcid(string input_file, string chain_name) {
+  // Method belonging to BasicProcess used for determining the number of Nodes/Amino Acids.
+  // At the end the member, mMaxIndex is the total number of Nodes that will be created
+  // in the method loadAminoAcid. mMaxIndex includes all Nodes across chains.
+  //
+  // Note: I think that this should be called countNode (?)
 
-  cout << "Loading " << chain_name << " from file: " << input_file << endl;
+  // Read csv files per chain ... <PROTEIN>_<CHAIN>.csv
+  // chain_name = <CHAIN>
+  // input_file = <PROTEIN>_<CHAIN>.csv
+  cout << "Counting nodes " << chain_name << " from file: " << input_file << endl;
 
+  // Create instance of CSVRead as network_file. (?)
   CSVRead network_file;
 
+  // Exception thrown if no input_file
   if(!network_file.OpenCSVFile(input_file))
   throw "Unable to open network file";
 
+  // Declare column name vector for string headers in input_file.
   vector<string> network_columns;
-  int name_index   = static_cast<int>(network_columns.size()); network_columns.push_back("ATOMNAME" );
+  // Declare name_index as the current size of network_columns (0)
+  //     this will be used as an index to the vector network_columns
+  // Then push_back ATOMNAME into network_columns as first element
+  //     network_columns.front() = ATOMNAME
+  int name_index   = static_cast<int>(network_columns.size()); network_columns.push_back("ATOMNAME");
 
+  // currently ATOMNAME is the only entry in network_columns
+  // therefore if he input_file does not have ATOMNAME as a
+  // header, then exception is thrown.
   if(!network_file.ReadCSVHeader(network_columns)) {
     throw "Network file didn't have correct column headers";
   }
 
+  //
   while(true) {
+    // Declare string vector to look for Node indicator name
     vector<string> fields = network_file.ReadCSVRecord();
     if(fields.size() == 0) {
       break;
     }
 
-    // If atom is not alpha carbon then go to next line
+    // If atom is not alpha carbon (CA) then go to next line
     if(fields[name_index].compare("CA") != 0)
       continue;
-
+    // increment the Node index, mMaxIndex member
     ++mMaxIndex;
   }
 
