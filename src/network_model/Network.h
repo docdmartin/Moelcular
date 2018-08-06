@@ -13,15 +13,13 @@
 #include <map>
 #include <vector>
 
-#include "network_model/Node.h"
 #include "network_model/Connection.h"
-#include "util/Common.h"
 
 using namespace std;
 
 class Network{
 public:
-    Network();
+    Network(Common&);
     ~Network();
 
     void SetMaxSpringLength( double m ) { mMaxSpringLength = m; mMaxRangeSq = m*m; }
@@ -35,20 +33,19 @@ public:
     void CreateBackboneConnection(int, int);
     void IdentifyContacts();
 
-
     void Print();
 
 private:
-    void addConnection(CommonEnum::ConnectionType, Node&, Node&);
+    void addConnection(CommonType::ConnectionType, Node&, Node&);
     void testConnection(int, int );
     bool calculateNodeProperties(vector<string>&, vector<double>&, vector<double>&, vector<double>&, vector<double>&);
     void voxelizeNode();
 
     double                                              mMaxSpringLength;
     double                                              mMaxRangeSq;
-    CommonEnum::NodeType                                mEstimateNodeType;
     vector<Node>                                        mNodes;
-    map<CommonEnum::ConnectionType, vector<Connection>> mConnections;
+    map<CommonType::ConnectionType, vector<Connection>> mConnections;
+    map<string, CommonType::ElementType>                mKnownElements;
 
     map<int, map<int, map<int, vector<int> > > > mNodeVoxels;
 
@@ -62,6 +59,8 @@ private:
     double mPosY;
     double mPosZ;
     double mEstQ;
+
+    Common& mParameter;
 };
 
 #endif

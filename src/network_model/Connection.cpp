@@ -9,8 +9,8 @@ using namespace std;
 
 
 
-Connection::Connection(Node& n1, Node& n2, CommonEnum::ConnectionType ct) :
-mNode1(n1), mNode2(n2), mConnectionType(ct)
+Connection::Connection(Common& common_param, Node& n1, Node& n2, CommonType::ConnectionType ct) :
+mNode1(n1), mNode2(n2), mConnectionType(ct), mParameter(common_param)
 {
   // mSeparation is vector pointing from mNode1 to mNode2
   mSeparation      = mNode1.GetSeparationVector(mNode2);
