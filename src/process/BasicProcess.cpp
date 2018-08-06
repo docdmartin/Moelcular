@@ -10,7 +10,8 @@ using namespace std;
 
 BasicProcess::BasicProcess(string filename, string pathname) :
   mConfigurationFile( filename ),
-  mPathName(pathname)
+  mPathName(pathname),
+  mNetworkModel(mParameter)
 {
     mMaxIndex = 0;
 
@@ -36,19 +37,19 @@ void BasicProcess::loadConfigurationFile(){
     if(!config_file.OpenCSVFile(mConfigurationFile))
         throw "Unable to open configuration file";
 
-	vector<string> config_columns;
-	int param_name_index  = static_cast<int>(config_columns.size()); config_columns.push_back("ParameterName" );
-	int param_value_index = static_cast<int>(config_columns.size()); config_columns.push_back("ParameterValue");
+	  vector<string> config_columns;
+	  int param_name_index  = static_cast<int>(config_columns.size()); config_columns.push_back("ParameterName" );
+	  int param_value_index = static_cast<int>(config_columns.size()); config_columns.push_back("ParameterValue");
 
-	if(!config_file.ReadCSVHeader(config_columns)) {
-		throw "Configuration file didn't have correct column headers";
-	}
+	  if(!config_file.ReadCSVHeader(config_columns)) {
+		    throw "Configuration file didn't have correct column headers";
+	  }
 
-	while(true) {
-		vector<string> fields = config_file.ReadCSVRecord();
-		if(fields.size() == 0) {
-			break;
-		}
+	  while(true) {
+		    vector<string> fields = config_file.ReadCSVRecord();
+		    if(fields.size() == 0) {
+			      break;
+		    }
 
         if(fields[param_name_index].compare("ProteinFolderName") == 0)
             mInputFolder = mPathName + fields[param_value_index];
@@ -56,9 +57,17 @@ void BasicProcess::loadConfigurationFile(){
             double maxSpringLength = atof( fields[param_value_index].c_str() );
             mNetworkModel.SetMaxSpringLength( maxSpringLength );
         }
+        if(fields[param_name_index].compare("NodeType") == 0) {
+            if(fields[param_value_index].compare("alpha_carbon") == 0) {
+                mParameter.SetNodeType( CommonType::NodeType::ALPHA_CARBON );
+            }
+            else if(fields[param_value_index].compare("mass_weighted") == 0) {
+                mParameter.SetNodeType( CommonType::NodeType::MASS_WEIGHTED_MEAN );
+            }
+        }
 
         cout << "Parameter: " << fields[param_name_index] << ", has value: " << fields[param_value_index] << endl;
-	}
+	  }
 }
 
 
@@ -217,6 +226,9 @@ void BasicProcess::loadAminoAcid(string input_file, string chain_name) {
     if(atomid.size() > 0) {
       int prev_node_index = node_index;
       node_index          = mNetworkModel.AddNode(resid, resname, atomid, atomname, x, y, z, q);
+
+      if(node_index < 0)
+        throw "Process terminated due to error";
 
       if(prev_node_index >= 0)
         mNetworkModel.CreateBackboneConnection(prev_node_index, node_index);

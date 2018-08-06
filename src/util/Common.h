@@ -1,24 +1,36 @@
 #ifndef ____Common__
 #define ____Common__
 
+#include <string>
+#include <set>
+#include <map>
+#include <vector>
+#include "util/CommonType.h"
 
-namespace CommonEnum {
-  /*
-    ConnectionType must has NO_CONNECTION specified as the first in a list of enum
-    and ALL_CONNECTION as the last. This is important since we iterate over the enum list at times
-  */
-  enum ConnectionType
-  {
-    NO_CONNECTION,
-    SPRING_LEVEL_1,
-    SPRING_LEVEL_2,
-    ALL_CONNECTION
-  };
+using namespace std;
 
-  enum NodeType{
-    ALPHA_CARBON,
-    AUXILIARY
-  };
-}
+class Common{
+public:
+    Common();
+    ~Common();
+
+    void SetNodeType(CommonType::NodeType n) { mNodeType = n; }
+    CommonType::NodeType GetNodeType() { return mNodeType; }
+
+    void SetVariables();
+
+    struct ElementData{
+      string abbreviation;
+      string name;
+      double mass;
+    };
+
+
+    map<CommonType::ElementType, ElementData> mPeriodicTable;
+    map<CommonType::NodeType, string>         mNodeTypeDef;
+
+private:
+    CommonType::NodeType                      mNodeType;
+};
 
 #endif

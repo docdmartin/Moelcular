@@ -28,6 +28,7 @@ private:
 
     Network mNetworkModel;
 
+    Common  mParameter;
 };
 
 #endif

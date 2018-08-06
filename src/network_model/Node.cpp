@@ -2,22 +2,23 @@
 
 #include "network_model/Node.h"
 
-Node::Node(
-  int            id,
-  int            amino_id,
-  string         amino_name,
-  double         node_pos_x,
-  double         node_pos_y,
-  double         node_pos_z,
-  double         node_q,
-  vector<int>    atom_ids,
-  vector<string> atom_names,
-  vector<double> atom_pos_x,
-  vector<double> atom_pos_y,
-  vector<double> atom_pos_z,
-  vector<double> atom_q)
-  : mNodeID(id)
+Node::Node(Common& common_param,
+  int                  id,
+  int                  amino_id,
+  string               amino_name,
+  double               node_pos_x,
+  double               node_pos_y,
+  double               node_pos_z,
+  double               node_q,
+  vector<int>          atom_ids,
+  vector<string>       atom_names,
+  vector<double>       atom_pos_x,
+  vector<double>       atom_pos_y,
+  vector<double>       atom_pos_z,
+  vector<double>       atom_q)
+  : mNodeID(id), mParameter(common_param)
 {
+
     mPos[0] =  node_pos_x;
     mPos[1] =  node_pos_y;
     mPos[2] =  node_pos_z;
@@ -53,30 +54,30 @@ vector<double> Node::GetSeparationVector(Node& tmpNode) {
   return los;
 }
 
-void Node::AddConnection(CommonEnum::ConnectionType ct, int id) {
-  map< CommonEnum::ConnectionType, set<int> >::iterator it = mConnections.find(ct);
+void Node::AddConnection(CommonType::ConnectionType ct, int id) {
+  map< CommonType::ConnectionType, set<int> >::iterator it = mConnections.find(ct);
   if(it == mConnections.end()) {
     set<int> tmpSet;
     tmpSet.insert( id );
-    mConnections.insert( pair< CommonEnum::ConnectionType, set<int> >(ct, tmpSet) );
+    mConnections.insert( pair< CommonType::ConnectionType, set<int> >(ct, tmpSet) );
     return;
   }
 
   it->second.insert( id );
 }
 
-bool Node::IsConnected(int id, CommonEnum::ConnectionType ct) {
+bool Node::IsConnected(int id, CommonType::ConnectionType ct) {
 
-  if(ct == CommonEnum::ConnectionType::ALL_CONNECTION) {
-    for ( int enumInt = CommonEnum::ConnectionType::NO_CONNECTION + 1; enumInt != CommonEnum::ConnectionType::ALL_CONNECTION; ++enumInt ) {
-      bool tmp = IsConnected(id, static_cast<CommonEnum::ConnectionType>(enumInt));
+  if(ct == CommonType::ConnectionType::ALL_CONNECTION) {
+    for ( int enumInt = CommonType::ConnectionType::NO_CONNECTION + 1; enumInt != CommonType::ConnectionType::ALL_CONNECTION; ++enumInt ) {
+      bool tmp = IsConnected(id, static_cast<CommonType::ConnectionType>(enumInt));
       if(tmp)
         return true;
     }
     return false;
   }
 
-  map< CommonEnum::ConnectionType, set<int> >::iterator it = mConnections.find(ct);
+  map< CommonType::ConnectionType, set<int> >::iterator it = mConnections.find(ct);
   if(it == mConnections.end())
     return false;
 
@@ -88,7 +89,7 @@ bool Node::IsConnected(int id, CommonEnum::ConnectionType ct) {
 
 
 void Node::Print() {
-  cout << "Node ID: " << mNodeID << ", type: " << mNodeType << endl;
+  cout << "Node ID: " << mNodeID << ", type: " << mParameter.mNodeTypeDef[mParameter.GetNodeType()] << endl;
   cout << "\tPosition : ( " << mPos[0] << ", " << mPos[1] << ", " << mPos[2] << " )" << endl;
   cout << "\tCharge   : " << mCharge << endl;
   cout << "\tResidual : #" << mResidualId << " ( " << mResidualName << " )" << endl;
@@ -106,7 +107,7 @@ void Node::Print() {
                               << ", " << setw(6) << setprecision(4) << mAtomPosZ[cnt]
                               << " ) and Charge : " << setw(6) << setprecision(4) << mAtomCharge[cnt] << endl;
 
-  for(map< CommonEnum::ConnectionType, set<int> >::iterator it = mConnections.begin(); it != mConnections.end(); ++it) {
+  for(map< CommonType::ConnectionType, set<int> >::iterator it = mConnections.begin(); it != mConnections.end(); ++it) {
     cout << "\tConnection type: " << it->first << endl;
     cout << "\t";
     for(int tmp : it->second)

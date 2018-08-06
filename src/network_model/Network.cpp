@@ -1,6 +1,7 @@
 #include <map>
 #include <limits>
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 
 #include "network_model/Network.h"
@@ -21,10 +22,9 @@ struct coord {
 
 
 
-Network::Network() {
+Network::Network(Common& common_param):mParameter(common_param) {
   mMaxSpringLength  = 1.0;
   mMaxRangeSq       = mMaxSpringLength * mMaxSpringLength;
-  mEstimateNodeType = CommonEnum::NodeType::ALPHA_CARBON;
 }
 
 Network::~Network(){
@@ -65,7 +65,7 @@ int Network::AddNode(
         mAABB[Z_INDEX][MAX_INDEX] = mPosZ;
 
     mNodes.push_back(
-      Node(
+      Node(mParameter,
         static_cast<int>(mNodes.size()),
         amino_id,
         amino_name,
@@ -92,9 +92,11 @@ bool Network::calculateNodeProperties(vector<string>& atom_names, vector<double>
   mPosZ   = 0.0;
   mEstQ   = 0.0;
 
-  switch( mEstimateNodeType ) {
-    case CommonEnum::NodeType::ALPHA_CARBON :
-    default :
+  switch( mParameter.GetNodeType() ) {
+
+    // Used when nodes are to be constructed according to alpha carbon
+    case CommonType::NodeType::ALPHA_CARBON :
+
       for(int cnt = 0; cnt < static_cast<int>(atom_names.size()); ++cnt) {
         if(atom_names[cnt].compare("CA") == 0) {
           mWeight += 1.0;
@@ -102,8 +104,54 @@ bool Network::calculateNodeProperties(vector<string>& atom_names, vector<double>
           mPosY  += atom_pos_y[cnt];
           mPosZ  += atom_pos_z[cnt];
           mEstQ  += atom_q[cnt];
+
+          break;
         }
       }
+      break;
+
+
+    // Used when nodes are to be constructed according to the weighted mean
+    case CommonType::NodeType::MASS_WEIGHTED_MEAN :
+
+      for(int cnt = 0; cnt < static_cast<int>(atom_names.size()); ++cnt) {
+          string abbrev = atom_names[cnt].substr(0,1);
+          map<string, CommonType::ElementType>::iterator it = mKnownElements.find(abbrev);
+          if(it == mKnownElements.end()) {
+              map<CommonType::ElementType, Common::ElementData>::iterator iter = mParameter.mPeriodicTable.begin();
+              for(; iter != mParameter.mPeriodicTable.end(); ++iter) {
+                  if(abbrev.compare(iter->second.abbreviation) == 0) {
+                      mKnownElements.insert( pair<string, CommonType::ElementType>(iter->second.abbreviation, iter->first) );
+                      it = mKnownElements.find(abbrev);
+                      break;
+                  }
+              }
+          }
+
+          if(it == mKnownElements.end()) {
+              cout << "Unable to find element: " << atom_names[cnt] << endl;
+              continue;
+          }
+
+          mWeight += mParameter.mPeriodicTable[it->second].mass;
+          mPosX   += mParameter.mPeriodicTable[it->second].mass * atom_pos_x[cnt];
+          mPosY   += mParameter.mPeriodicTable[it->second].mass * atom_pos_y[cnt];
+          mPosZ   += mParameter.mPeriodicTable[it->second].mass * atom_pos_z[cnt];
+          mEstQ   += mParameter.mPeriodicTable[it->second].mass * atom_q[cnt];
+      }
+
+      break;
+
+
+    // Configuration file failed to identify how nodes are to be constructed
+    // Please insert one of the following lines into configuration file
+    //  NodeType,alpha_carbon
+    //  NodeType,mass_weighted
+    case CommonType::NodeType::UNDEFINED :
+    default :
+      cout << "Node type is undefined" << endl;
+      mWeight = 0.0;
+      break;
   }
 
   // Common block to average results for all methods
@@ -124,21 +172,21 @@ void Network::CreateBackboneConnection(int index1, int index2) {
     return;
   }
 
-  addConnection(CommonEnum::ConnectionType::SPRING_LEVEL_1, mNodes[index1], mNodes[index2]);
+  addConnection(CommonType::ConnectionType::SPRING_LEVEL_1, mNodes[index1], mNodes[index2]);
 }
 
 
-void Network::addConnection(CommonEnum::ConnectionType connType, Node& n1, Node& n2) {
-  map<CommonEnum::ConnectionType, vector<Connection>>::iterator it = mConnections.find(connType);
+void Network::addConnection(CommonType::ConnectionType connType, Node& n1, Node& n2) {
+  map<CommonType::ConnectionType, vector<Connection>>::iterator it = mConnections.find(connType);
 
   if(it == mConnections.end()) {
     vector<Connection> tmpConn;
-    tmpConn.push_back( Connection(n1, n2, connType ) );
-    mConnections.insert( pair<CommonEnum::ConnectionType, vector<Connection>>(connType, tmpConn) );
+    tmpConn.push_back( Connection(mParameter, n1, n2, connType ) );
+    mConnections.insert( pair<CommonType::ConnectionType, vector<Connection>>(connType, tmpConn) );
     return;
   }
 
-  it->second.push_back( Connection(n1, n2, connType) );
+  it->second.push_back( Connection(mParameter, n1, n2, connType) );
 }
 
 
@@ -213,7 +261,7 @@ void Network::IdentifyContacts() {
 
 void Network::testConnection(int p_index, int s_index) {
   // if nodes are already linked then continue to next node
-  if( mNodes[p_index].IsConnected(s_index, CommonEnum::ConnectionType::ALL_CONNECTION) )
+  if( mNodes[p_index].IsConnected(s_index, CommonType::ConnectionType::ALL_CONNECTION) )
     return;
 
   // range suare test
@@ -227,7 +275,7 @@ void Network::testConnection(int p_index, int s_index) {
 
   // if pass test then create secondary link
   if(squared_distance < mMaxRangeSq) {
-    addConnection(CommonEnum::ConnectionType::SPRING_LEVEL_2, mNodes[p_index], mNodes[s_index]);
+    addConnection(CommonType::ConnectionType::SPRING_LEVEL_2, mNodes[p_index], mNodes[s_index]);
   }
 }
 
@@ -279,6 +327,20 @@ void Network::voxelizeNode() {
 
 
 void Network::Print() {
+/*
+  map<CommonType::ElementType, Common::ElementData>::iterator it    = mParameter.mPeriodicTable.begin();
+  map<CommonType::ElementType, Common::ElementData>::iterator endIt = mParameter.mPeriodicTable.end();
+  for(; it != endIt; ++it) {
+      cout << setiosflags(ios::right);
+      cout << setiosflags(ios::fixed);
+      cout << "Element #"    << setw(3) << it->first
+           << ", abbr.: "    << std::left  << setw(2) << it->second.abbreviation
+           << ", name: "     << setw(13)<< it->second.name
+           << ", and mass: " << std::right << setw(10) << setprecision(6) << it->second.mass << endl;
+  }
+  return;
+*/
+
   cout << "Nodes" << endl;
   for(auto node : mNodes)
     node.Print();
@@ -286,7 +348,7 @@ void Network::Print() {
     return;
 
   cout << "Connections" << endl;
-  for(map<CommonEnum::ConnectionType, vector<Connection>>::iterator it = mConnections.begin(); it != mConnections.end(); ++it)
+  for(map<CommonType::ConnectionType, vector<Connection>>::iterator it = mConnections.begin(); it != mConnections.end(); ++it)
     for(auto conn : it->second)
       conn.Print();
 
