@@ -8,7 +8,8 @@ SOURCES=main.cpp \
     src/network_model/Network.cpp \
 		src/network_model/Connection.cpp \
 		src/network_model/Node.cpp \
-		src/util/Common.cpp
+		src/util/Common.cpp \
+		src/math/LinearAlgebra.cpp
 
 OBJECTS=$(SOURCES:.cpp=.o)
 

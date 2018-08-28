@@ -13,6 +13,13 @@ public:
     Connection(Common&, Node&, Node&, CommonType::ConnectionType);
     ~Connection();
 
+    int GetNodeId1() { return mNode1.GetID(); }
+    int GetNodeId2() { return mNode2.GetID(); }
+
+    vector<double> GetSeparation() { return mSeparation; }
+
+    double GetSpringConstant() { return mSpringConstant; }
+
     void Print();
 
 private:
@@ -22,6 +29,7 @@ private:
     CommonType::ConnectionType mConnectionType;
     vector<double> mSeparation;
     double         mSquaredDistance;
+    double         mSpringConstant;
 
     Common& mParameter;
 };

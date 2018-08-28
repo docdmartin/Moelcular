@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "network_model/Connection.h"
+#include "math/LinearAlgebra.h"
 
 using namespace std;
 
@@ -48,6 +49,8 @@ private:
     map<string, CommonType::ElementType>                mKnownElements;
 
     map<int, map<int, map<int, vector<int> > > > mNodeVoxels;
+
+    LinearAlgebra mLinearSolver;
 
     double mAABB[3][2] = {{numeric_limits<double>::max(), numeric_limits<double>::lowest()},
                           {numeric_limits<double>::max(), numeric_limits<double>::lowest()},
