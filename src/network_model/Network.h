@@ -34,6 +34,9 @@ public:
     void CreateBackboneConnection(int, int);
     void IdentifyContacts();
 
+    void ConstructLinearResponse();
+    void SetConstantVector(vector<double>& b);
+
     void Print();
 
 private:
@@ -41,6 +44,7 @@ private:
     void testConnection(int, int );
     bool calculateNodeProperties(vector<string>&, vector<double>&, vector<double>&, vector<double>&, vector<double>&);
     void voxelizeNode();
+
 
     double                                              mMaxSpringLength;
     double                                              mMaxRangeSq;

@@ -103,10 +103,8 @@ bool Network::calculateNodeProperties(vector<string>& atom_names, vector<double>
           mPosX  += atom_pos_x[cnt];
           mPosY  += atom_pos_y[cnt];
           mPosZ  += atom_pos_z[cnt];
-          mEstQ  += atom_q[cnt];
-
-          break;
         }
+        mEstQ  += atom_q[cnt];
       }
       break;
 
@@ -256,8 +254,13 @@ void Network::IdentifyContacts() {
       }
     }
   }
+}
 
-
+/*
+  All connections are established
+  Begin construction of linear response function
+*/
+void Network::ConstructLinearResponse() {
   // Inititalize the linear solver
   mLinearSolver.SetDimension(static_cast<int>(mNodes.size()));
 
@@ -267,6 +270,10 @@ void Network::IdentifyContacts() {
       mLinearSolver.SetConnection(conn.GetNodeId2(), conn.GetNodeId1(), conn.GetSeparation(), conn.GetSpringConstant());
     }
   }
+}
+
+void Network::SetConstantVector(vector<double>& b) {
+  mLinearSolver.SetConstantVector( b );
 }
 
 void Network::testConnection(int p_index, int s_index) {

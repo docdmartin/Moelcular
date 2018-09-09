@@ -12,6 +12,11 @@ Common::~Common(){
 void Common::SetVariables() {
       mNodeType = NodeType::UNDEFINED;
 
+      mConnectionStrength[CommonType::NO_CONNECTION ] =  0.0;
+      mConnectionStrength[CommonType::SPRING_LEVEL_1] = 10.0;
+      mConnectionStrength[CommonType::SPRING_LEVEL_2] =  1.0;
+      mConnectionStrength[CommonType::ALL_CONNECTION] =  1.0;
+
       mNodeTypeDef[NodeType::UNDEFINED         ] = "Undefined";
       mNodeTypeDef[NodeType::ALPHA_CARBON      ] = "Alpha Carbon";
       mNodeTypeDef[NodeType::MASS_WEIGHTED_MEAN] = "Mass Weighted Mean";

@@ -18,7 +18,7 @@ public:
 
     vector<double> GetSeparation() { return mSeparation; }
 
-    double GetSpringConstant() { return mSpringConstant; }
+    double GetSpringConstant() { return mSpringConstant / mSquaredDistance; }
 
     void Print();
 

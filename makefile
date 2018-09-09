@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-c -std=c++11 -Wall -Isrc
+CFLAGS=-c -std=c++11 -O3 -Wall -Isrc
 LDFLAGS=
 HEADER = src/util/CommonType.h
 SOURCES=main.cpp \
@@ -18,10 +18,10 @@ EXECUTABLE=raam
 all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(LDFLAGS) $(OBJECTS) -O -o $@
+	$(CC) $(LDFLAGS) $(OBJECTS) -O3 -o $@
 
 %.o: %.cpp $(HEADER)
-	$(CC) $(CFLAGS) $< -O -o $@
+	$(CC) $(CFLAGS) $< -O3 -o $@
 
 clean:
 	rm raam $(OBJECTS)
