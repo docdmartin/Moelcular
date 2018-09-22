@@ -21,6 +21,9 @@ BasicProcess::BasicProcess(string filename, string pathname) :
     // Step #2: Construction
     loadNetworkModel();
 
+    // Step #3: 
+    //loadAtomsCharges();
+
     mNetworkModel.Print();
 }
 
@@ -91,7 +94,8 @@ void BasicProcess::loadNetworkModel() {
 
       string chain = tmpFileName.substr(proteinName.size()+1, tmpFileName.size() - proteinName.size() - 5);
 
-      countAminoAcid(mInputFolder + "/" + tmpFileName, chain);
+      //countAminoAcid(mInputFolder + "/" + tmpFileName, chain);
+      countNode(mInputFolder + "/" + tmpFileName, chain);
     }
     closedir (dir);
 
@@ -105,7 +109,8 @@ void BasicProcess::loadNetworkModel() {
 
       string chain = tmpFileName.substr(proteinName.size()+1, tmpFileName.size() - proteinName.size() - 5);
 
-      loadAminoAcid(mInputFolder + "/" + tmpFileName, chain);
+      //loadAminoAcid(mInputFolder + "/" + tmpFileName, chain);
+      loadStruct(mInputFolder + "/" + tmpFileName, chain);
     }
     closedir (dir);
 
@@ -114,8 +119,10 @@ void BasicProcess::loadNetworkModel() {
   mNetworkModel.IdentifyContacts();
 }
 
-void BasicProcess::countAminoAcid(string input_file, string chain_name) {
-  // Method belonging to BasicProcess used for determining the number of Nodes/Amino Acids.
+// Changed to countNode
+//void BasicProcess::countAminoAcid(string input_file, string chain_name) {
+void BasicProcess::countNode(string input_file, string chain_name) {
+  // Method belonging to BasicProcess used for determining the number of Nodes (Amino Acids).
   // At the end the member, mMaxIndex is the total number of Nodes that will be created
   // in the method loadAminoAcid. mMaxIndex includes all Nodes across chains.
   //
@@ -160,12 +167,14 @@ void BasicProcess::countAminoAcid(string input_file, string chain_name) {
     if(fields[name_index].compare("CA") != 0)
       continue;
     // increment the Node index, mMaxIndex member
+    // the number of nodes
     ++mMaxIndex;
   }
 
 }
 
-void BasicProcess::loadAminoAcid(string input_file, string chain_name) {
+//void BasicProcess::loadAminoAcid(string input_file, string chain_name) {
+void BasicProcess::loadStruct(string input_file, string chain_name) {
 
   cout << "Loading " << chain_name << " from file: " << input_file << endl;
 

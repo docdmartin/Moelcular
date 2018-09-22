@@ -17,8 +17,11 @@ public:
 private:
     void loadConfigurationFile();
     void loadNetworkModel();
-    void loadAminoAcid(string, string);
-    void countAminoAcid(string, string);
+    //void loadAminoAcid(string, string);
+    void loadStruct(string, string);
+    void loadAtomsCharges(string, string);
+    //void countAminoAcid(string, string);
+    void countNode(string, string);
 
     int     mMaxIndex;
     string  mConfigurationFile;

@@ -103,9 +103,13 @@ bool Network::calculateNodeProperties(vector<string>& atom_names, vector<double>
           mPosX  += atom_pos_x[cnt];
           mPosY  += atom_pos_y[cnt];
           mPosZ  += atom_pos_z[cnt];
-          mEstQ  += atom_q[cnt];
+          //mEstQ  += atom_q[cnt];
 
-          break;
+          //break;
+        }
+        mEstQ  += atom_q[cnt];
+        if(cnt == (static_cast<int>(atom_names.size())-1)) {
+            cout << " CHARGE ( ATOMS = " << cnt << " ) = " << mEstQ << endl;
         }
       }
       break;
@@ -137,7 +141,11 @@ bool Network::calculateNodeProperties(vector<string>& atom_names, vector<double>
           mPosX   += mParameter.mPeriodicTable[it->second].mass * atom_pos_x[cnt];
           mPosY   += mParameter.mPeriodicTable[it->second].mass * atom_pos_y[cnt];
           mPosZ   += mParameter.mPeriodicTable[it->second].mass * atom_pos_z[cnt];
-          mEstQ   += mParameter.mPeriodicTable[it->second].mass * atom_q[cnt];
+          //mEstQ   += mParameter.mPeriodicTable[it->second].mass * atom_q[cnt];
+          mEstQ   += atom_q[cnt];
+          if(cnt == (static_cast<int>(atom_names.size())-1)) {
+              cout << " CHARGE ( ATOMS = " << cnt << " ) = " << mEstQ << endl;
+          }
       }
 
       break;
@@ -161,7 +169,7 @@ bool Network::calculateNodeProperties(vector<string>& atom_names, vector<double>
   mPosX /= mWeight;
   mPosY /= mWeight;
   mPosZ /= mWeight;
-  mEstQ /= mWeight;
+  //mEstQ /= mWeight;
 
   return true;
 }
