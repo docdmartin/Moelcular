@@ -1,5 +1,6 @@
 *.o
 molecular
+.DS_Store
 # USE THIS IF THE DESIRE IS TO KEEP A PARTICULAR FILETYPE EVEN IF IT IS IN THE ABOVE IGNORE STATEMENTS
 ###!<dir_path>/*.<file_type>
 
