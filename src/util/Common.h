@@ -28,6 +28,7 @@ public:
 
     map<CommonType::ElementType, ElementData> mPeriodicTable;
     map<CommonType::NodeType, string>         mNodeTypeDef;
+    map<CommonType::ConnectionType, double>   mConnectionStrength;
 
 private:
     CommonType::NodeType                      mNodeType;

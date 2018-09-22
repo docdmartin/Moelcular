@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "network_model/Connection.h"
+#include "math/LinearAlgebra.h"
 
 using namespace std;
 
@@ -33,6 +34,9 @@ public:
     void CreateBackboneConnection(int, int);
     void IdentifyContacts();
 
+    void ConstructLinearResponse();
+    void SetConstantVector(vector<double>& b);
+
     void Print();
 
 private:
@@ -41,6 +45,7 @@ private:
     bool calculateNodeProperties(vector<string>&, vector<double>&, vector<double>&, vector<double>&, vector<double>&);
     void voxelizeNode();
 
+
     double                                              mMaxSpringLength;
     double                                              mMaxRangeSq;
     vector<Node>                                        mNodes;
@@ -48,6 +53,8 @@ private:
     map<string, CommonType::ElementType>                mKnownElements;
 
     map<int, map<int, map<int, vector<int> > > > mNodeVoxels;
+
+    LinearAlgebra mLinearSolver;
 
     double mAABB[3][2] = {{numeric_limits<double>::max(), numeric_limits<double>::lowest()},
                           {numeric_limits<double>::max(), numeric_limits<double>::lowest()},

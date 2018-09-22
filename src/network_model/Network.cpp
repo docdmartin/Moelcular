@@ -103,14 +103,10 @@ bool Network::calculateNodeProperties(vector<string>& atom_names, vector<double>
           mPosX  += atom_pos_x[cnt];
           mPosY  += atom_pos_y[cnt];
           mPosZ  += atom_pos_z[cnt];
-          //mEstQ  += atom_q[cnt];
-
-          //break;
         }
         mEstQ  += atom_q[cnt];
-        if(cnt == (static_cast<int>(atom_names.size())-1)) {
-            cout << " CHARGE ( ATOMS = " << cnt << " ) = " << mEstQ << endl;
-        }
+        //if(cnt == (static_cast<int>(atom_names.size())-1)) {
+        //    cout << " CHARGE ( ATOMS = " << cnt << " ) = " << mEstQ << endl;
       }
       break;
 
@@ -141,11 +137,10 @@ bool Network::calculateNodeProperties(vector<string>& atom_names, vector<double>
           mPosX   += mParameter.mPeriodicTable[it->second].mass * atom_pos_x[cnt];
           mPosY   += mParameter.mPeriodicTable[it->second].mass * atom_pos_y[cnt];
           mPosZ   += mParameter.mPeriodicTable[it->second].mass * atom_pos_z[cnt];
-          //mEstQ   += mParameter.mPeriodicTable[it->second].mass * atom_q[cnt];
           mEstQ   += atom_q[cnt];
-          if(cnt == (static_cast<int>(atom_names.size())-1)) {
-              cout << " CHARGE ( ATOMS = " << cnt << " ) = " << mEstQ << endl;
-          }
+      //    if(cnt == (static_cast<int>(atom_names.size())-1)) {
+      //        cout << " CHARGE ( ATOMS = " << cnt << " ) = " << mEstQ << endl;
+      //    }
       }
 
       break;
@@ -169,7 +164,6 @@ bool Network::calculateNodeProperties(vector<string>& atom_names, vector<double>
   mPosX /= mWeight;
   mPosY /= mWeight;
   mPosZ /= mWeight;
-  //mEstQ /= mWeight;
 
   return true;
 }
@@ -265,6 +259,26 @@ void Network::IdentifyContacts() {
       }
     }
   }
+}
+
+/*
+  All connections are established
+  Begin construction of linear response function
+*/
+void Network::ConstructLinearResponse() {
+  // Inititalize the linear solver
+  mLinearSolver.SetDimension(static_cast<int>(mNodes.size()));
+
+  map<CommonType::ConnectionType, vector<Connection>>::iterator it = mConnections.begin();
+  for(; it != mConnections.end(); ++it) {
+    for(Connection conn : it->second) {
+      mLinearSolver.SetConnection(conn.GetNodeId2(), conn.GetNodeId1(), conn.GetSeparation(), conn.GetSpringConstant());
+    }
+  }
+}
+
+void Network::SetConstantVector(vector<double>& b) {
+  mLinearSolver.SetConstantVector( b );
 }
 
 void Network::testConnection(int p_index, int s_index) {

@@ -21,8 +21,12 @@ BasicProcess::BasicProcess(string filename, string pathname) :
     // Step #2: Construction
     loadNetworkModel();
 
-    // Step #3: 
-    //loadAtomsCharges();
+    // Step #3: Solve
+    mNetworkModel.ConstructLinearResponse();
+    //   Build E vector and supply it to the linear solver as the constant vector (b)
+    //   Supply omega value and solve
+    //     Contract solution with E vector to get get potential
+    //     Build T tensor and solve remainder of problem
 
     mNetworkModel.Print();
 }

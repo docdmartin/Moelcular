@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "network_model/Connection.h"
+#include "util/Common.h"
 
 using namespace std;
 
@@ -12,6 +13,8 @@ using namespace std;
 Connection::Connection(Common& common_param, Node& n1, Node& n2, CommonType::ConnectionType ct) :
 mNode1(n1), mNode2(n2), mConnectionType(ct), mParameter(common_param)
 {
+  mSpringConstant  = mParameter.mConnectionStrength[mConnectionType];
+
   // mSeparation is vector pointing from mNode1 to mNode2
   mSeparation      = mNode1.GetSeparationVector(mNode2);
 
