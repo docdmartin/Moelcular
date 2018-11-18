@@ -33,6 +33,7 @@ public:
     double GetX() { return mPos[0]; }
     double GetY() { return mPos[1]; }
     double GetZ() { return mPos[2]; }
+    double GetQ() { return mCharge; }
     int    GetID() { return mNodeID; }
 
     vector<double> GetSeparationVector(Node&);

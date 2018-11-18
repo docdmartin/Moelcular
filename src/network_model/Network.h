@@ -49,6 +49,7 @@ private:
     double                                              mMaxSpringLength;
     double                                              mMaxRangeSq;
     vector<Node>                                        mNodes;
+    vector<double>                                      mElectricField;
     map<CommonType::ConnectionType, vector<Connection>> mConnections;
     map<string, CommonType::ElementType>                mKnownElements;
 

@@ -147,10 +147,14 @@ bool Network::calculateNodeProperties(vector<string>& atom_names, vector<double>
     //  NodeType,mass_weighted
     case CommonType::NodeType::UNDEFINED :
     default :
-      cout << "Node type is undefined" << endl;
+      cout << "Node type " << mParameter.GetNodeType() << " is undefined" << endl;
       mWeight = 0.0;
       break;
   }
+
+  // Remove numerical noise built into the charge
+  mEstQ = 1e-4 * floor(mEstQ * 1e4 + 0.5);
+
 
   // Common block to average results for all methods
   if(mWeight == 0.0)
@@ -270,6 +274,39 @@ void Network::ConstructLinearResponse() {
       mLinearSolver.SetConnection(conn.GetNodeId2(), conn.GetNodeId1(), conn.GetSeparation(), conn.GetSpringConstant());
     }
   }
+
+
+  // Calculate the electric field at a point ref_pnt, Eo
+  vector<double> ref_pnt = {0.0, 0.0, 0.0};
+  mElectricField.reserve( 3 * mNodes.size() );
+  for(auto node : mNodes) {
+    double q = node.GetQ();
+
+    double dx = ref_pnt[0] - node.GetX();
+    double dy = ref_pnt[1] - node.GetY();
+    double dz = ref_pnt[2] - node.GetZ();
+
+    double constant_value = q * pow(dx*dx + dy*dy + dz*dz, -1.5);
+    mElectricField.push_back( dx * constant_value );
+    mElectricField.push_back( dy * constant_value );
+    mElectricField.push_back( dz * constant_value );
+  }
+
+  mLinearSolver.SetConstantVector(mElectricField);
+
+  double omega = 1.0e1;
+  //mLinearSolver.CreateRotationalEigenVectors( mNodes );
+  mLinearSolver.SetOmega(omega);
+  mLinearSolver.PreProcess();
+  mLinearSolver.PerformCG();
+
+  double real_potential = 0.0;
+  double imag_potential = 0.0;
+  mLinearSolver.GetPotential(&real_potential, &imag_potential);
+
+  cout << "Potential for reference point: (" << ref_pnt[0] << ", " << ref_pnt[1] << ", " << ref_pnt[2] << ")" << endl;
+  cout << "\tomega = " << omega << endl;
+  cout << "\tis: " << real_potential << " + " << imag_potential << "i" << endl;
 }
 
 void Network::SetConstantVector(vector<double>& b) {

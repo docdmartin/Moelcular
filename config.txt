@@ -1,4 +1,4 @@
 ParameterName,ParameterValue
 MaxSpringLength,6.00
-ProteinFolderName,database/lys
+ProteinFolderName,database/lys,tmp,
 NodeType,mass_weighted,alpha_carbon

@@ -28,7 +28,7 @@ BasicProcess::BasicProcess(string filename, string pathname) :
     //     Contract solution with E vector to get get potential
     //     Build T tensor and solve remainder of problem
 
-    mNetworkModel.Print();
+//    mNetworkModel.Print();
 }
 
 
@@ -122,8 +122,6 @@ void BasicProcess::loadNetworkModel() {
 }
 
 void BasicProcess::countAminoAcid(string input_file, string chain_name) {
-
-  cout << "Loading " << chain_name << " from file: " << input_file << endl;
 
   CSVRead network_file;
 

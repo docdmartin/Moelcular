@@ -4,6 +4,8 @@
 #include <iostream>
 #include <vector>
 
+#include "network_model/Node.h"
+
 using namespace std;
 
 class LinearAlgebra{
@@ -20,6 +22,7 @@ public:
     void SetOmega(double d) { mOmega = d; }
     void SetConnection(int, int, vector<double>, double);
     void SetConstantVector(vector<double>&);
+//    void CreateRotationalEigenVectors( vector<Node>& );
 
 private:
     struct OuterProduct {
@@ -33,7 +36,15 @@ private:
         double mScalar;
     };
 
+    bool just_once = true;
+
+    void multiplyLinearSystem(vector<double>&, vector<double>&);
     void multiplyMatrixA(vector<double>&, vector<double>&);
+//    void removeProjIntoZeroEigen( vector<double>& );
+
+    void printMatrixA();
+    void printMatrixB();
+
 
     int    mNumberNodes;
     int    mRealDimension;
@@ -57,6 +68,13 @@ private:
     vector<double> z;
     vector<double> p;
     vector<double> w;
+
+
+    // translation eigenvector
+    double mNormalizedTranslation;
+    vector<double> mRotationXY;
+    vector<double> mRotationXZ;
+    vector<double> mRotationYZ;
 };
 
 #endif
