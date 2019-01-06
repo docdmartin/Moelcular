@@ -3,13 +3,13 @@ CFLAGS=-c -std=c++11 -O3 -Wall -Isrc
 LDFLAGS=
 HEADER = src/util/CommonType.h
 SOURCES=main.cpp \
-	src/process/BasicProcess.cpp \
-    src/util/CSVRead.cpp \
-    src/network_model/Network.cpp \
+		src/ElasticNetworkModel.cpp \
 		src/network_model/Connection.cpp \
 		src/network_model/Node.cpp \
-		src/util/Common.cpp \
-		src/math/LinearAlgebra.cpp
+		src/network_model/HessianMatrix.cpp \
+		src/network_model/ReferencePoint.cpp \
+    src/util/CSVRead.cpp \
+		src/util/Common.cpp
 
 OBJECTS=$(SOURCES:.cpp=.o)
 
