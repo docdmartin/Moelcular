@@ -2,22 +2,61 @@
 
 #include "network_model/ReferencePoint.h"
 
-ReferencePoint::ReferencePoint(double x, double y, double z) {
+ReferencePoint::ReferencePoint(double x, double y, double z, vector<Node> &nodes, HessianMatrix &hessianMatrix) {
     mPosition.push_back(x);
     mPosition.push_back(y);
     mPosition.push_back(z);
 
-    mBTb   = 0.0;
-    mSigma = 0.0;
+    mPotentialL2    = 0.0;
+    mPotentialSigma = 0.0;
+
+    mTxxL2    = 0.0;
+    mTxxSigma = 0.0;
+
+    mTyyL2    = 0.0;
+    mTyySigma = 0.0;
+
+    mTzzL2    = 0.0;
+    mTzzSigma = 0.0;
+
+    preCompute( nodes, hessianMatrix );
 }
+
+ReferencePoint::ReferencePoint(const ReferencePoint& rp) {
+    mPosition        = rp.GetPosition();
+
+    mPotentialL2     = rp.GetPotentialL2();
+    mPotentialSigma  = rp.GetPotentialSigma();
+    mPotentialLambda = rp.GetPotentialLambda();
+
+    mTxxL2     = rp.GetTxxL2();
+    mTxxSigma  = rp.GetTxxSigma();
+    mTxxLambda = rp.GetTxxLambda();
+
+    mTyyL2     = rp.GetTyyL2();
+    mTyySigma  = rp.GetTyySigma();
+    mTyyLambda = rp.GetTyyLambda();
+
+    mTzzL2     = rp.GetTzzL2();
+    mTzzSigma  = rp.GetTzzSigma();
+    mTzzLambda = rp.GetTzzLambda();
+}
+
 ReferencePoint::~ReferencePoint()
 {
 }
 
 
-void ReferencePoint::BuildPotential(vector<Node> &nodes, HessianMatrix &hessianMatrix) {
+void ReferencePoint::preCompute(vector<Node> &nodes, HessianMatrix &hessianMatrix) {
     vector<double> electricPotential;
+    vector<double> dipoleTensorX;
+    vector<double> dipoleTensorY;
+    vector<double> dipoleTensorZ;
+
     electricPotential.reserve( 3 * nodes.size() );
+    dipoleTensorX    .reserve( 3 * nodes.size() );
+    dipoleTensorY    .reserve( 3 * nodes.size() );
+    dipoleTensorZ    .reserve( 3 * nodes.size() );
 
     for(auto node : nodes) {
         double q = node.GetQ();
@@ -26,63 +65,98 @@ void ReferencePoint::BuildPotential(vector<Node> &nodes, HessianMatrix &hessianM
         double dy = mPosition[1] - node.GetY();
         double dz = mPosition[2] - node.GetZ();
 
-        double constant_value = q * pow(dx*dx + dy*dy + dz*dz, -1.5);
-        electricPotential.push_back( dx * constant_value );
-        electricPotential.push_back( dy * constant_value );
-        electricPotential.push_back( dz * constant_value );
-    }
+        double dx_sq = dx*dx;
+        double dy_sq = dy*dy;
+        double dz_sq = dz*dz;
+        double r_sq  = dx_sq + dy_sq + dz_sq;
+        double r     = sqrt( r_sq );
 
-    mBTb = innerProduct(electricPotential, electricPotential);
-//cout << "Potential magnitude = " << mBTb << endl;
+        double dipole_constant    = r * r_sq;
+        double potential_constant = q   / dipole_constant;
+        dipole_constant           = dipole_constant * r_sq;
+        double diag_constant      = r_sq / dipole_constant;
+        dipole_constant           = -3.0 / dipole_constant;
 
-    vector<double> result;
-    result.resize( 3 * nodes.size() );
+        electricPotential.push_back( dx * potential_constant );
+        electricPotential.push_back( dy * potential_constant );
+        electricPotential.push_back( dz * potential_constant );
 
-    vector<double> result2;
-    result2.resize( 3 * nodes.size() );
+        dipoleTensorX.push_back( diag_constant + dx_sq * dipole_constant );
+        double yy              = diag_constant + dy_sq * dipole_constant;
+        double zz              = diag_constant + dz_sq * dipole_constant;
 
-    hessianMatrix.MultiplyMatrix(electricPotential, result);
-    mLambda.push_back( innerProduct(electricPotential, result) / mBTb );
+        double tmp_xy = dx * dy * dipole_constant;
+        dipole_constant *= dz;
+        double tmp_xz = dx * dipole_constant;
+        double tmp_yz = dy * dipole_constant;
 
-    double last_lambda[3] = {0.0, 0.0, 0.0};
-    double scalar_value;
+        dipoleTensorX.push_back( tmp_xy );
+        dipoleTensorX.push_back( tmp_xz );
 
-    int cnt      = 0;
-    int term_cnt = 0;
-    while( term_cnt < 2 ) {
-        last_lambda[2] = *(mLambda.rbegin());
+        dipoleTensorY.push_back( tmp_xy );
+        dipoleTensorY.push_back( yy );
+        dipoleTensorY.push_back( tmp_yz );
 
-        // Two steps per loop to address ping-pong of vectors
-        grahamSchmit( result, electricPotential, *(mLambda.rbegin()) );
-        scalar_value = rescale( result );
-        hessianMatrix.MultiplyMatrix(result, result2);
-        mLambda.push_back( scalar_value * innerProduct(electricPotential, result2) / mBTb );
-        last_lambda[1] = *(mLambda.rbegin());
-
-        grahamSchmit( result2, electricPotential, *(mLambda.rbegin()) );
-        scalar_value = rescale( result2 );
-        hessianMatrix.MultiplyMatrix(result2, result);
-        mLambda.push_back( scalar_value * innerProduct(electricPotential, result) / mBTb );
-        last_lambda[0] = *(mLambda.rbegin());
-
-//cout << cnt+1 << ") " << last_lambda[1] << " ratio = " << last_lambda[1] / last_lambda[2] << endl;
-//cout << cnt+2 << ") " << last_lambda[0] << " ratio = " << last_lambda[0] / last_lambda[1] << endl;
-//cout << "Convergence criteria = " << fabs( (last_lambda[1]*last_lambda[1])/(last_lambda[0]*last_lambda[2]) - 1.0) << endl;
-        cnt += 2;
-        if(cnt < 10)
-            continue;
-
-        if(fabs( (last_lambda[1]*last_lambda[1])/(last_lambda[0]*last_lambda[2]) - 1.0) < 1e-6) {
-            term_cnt += 1;
-        }
-        else{
-            term_cnt = 0;
-        }
-
+        dipoleTensorZ.push_back( tmp_xz );
+        dipoleTensorZ.push_back( tmp_yz );
+        dipoleTensorZ.push_back( zz );
 
     }
 
-    mSigma = last_lambda[0] / last_lambda[1];
+    calculateFrequencyTerms( electricPotential, mPotentialL2, mPotentialSigma, mPotentialLambda, nodes, hessianMatrix );
+    calculateFrequencyTerms( dipoleTensorX    , mTxxL2      , mTxxSigma      , mTxxLambda      , nodes, hessianMatrix );
+    calculateFrequencyTerms( dipoleTensorY    , mTyyL2      , mTyySigma      , mTyyLambda      , nodes, hessianMatrix );
+    calculateFrequencyTerms( dipoleTensorZ    , mTzzL2      , mTzzSigma      , mTzzLambda      , nodes, hessianMatrix );
+}
+
+
+void ReferencePoint::calculateFrequencyTerms(vector<double>& b_vector, double& bT_b, double& sigma, vector<double>& lambda, vector<Node> &nodes, HessianMatrix &hessianMatrix ) {
+
+  bT_b = innerProduct(b_vector, b_vector);
+
+  vector<double> result;
+  result.resize( 3 * nodes.size() );
+
+  vector<double> result2;
+  result2.resize( 3 * nodes.size() );
+
+  hessianMatrix.MultiplyMatrix(b_vector, result);
+  lambda.push_back( innerProduct(b_vector, result) / bT_b );
+
+  double last_lambda[3] = {0.0, 0.0, 0.0};
+  double scalar_value;
+
+  int cnt      = 0;
+  int term_cnt = 0;
+  while( term_cnt < 2 ) {
+      last_lambda[2] = *(lambda.rbegin());
+
+      // Two steps per loop to address ping-pong of vectors
+      grahamSchmit( result, b_vector, *(lambda.rbegin()) );
+      scalar_value = rescale( result );
+      hessianMatrix.MultiplyMatrix(result, result2);
+      lambda.push_back( scalar_value * innerProduct(b_vector, result2) / bT_b );
+      last_lambda[1] = *(lambda.rbegin());
+
+      grahamSchmit( result2, b_vector, *(lambda.rbegin()) );
+      scalar_value = rescale( result2 );
+      hessianMatrix.MultiplyMatrix(result2, result);
+      lambda.push_back( scalar_value * innerProduct(b_vector, result) / bT_b );
+      last_lambda[0] = *(lambda.rbegin());
+
+      cnt += 2;
+      if(cnt < 10)
+          continue;
+
+      if(fabs( (last_lambda[1]*last_lambda[1])/(last_lambda[0]*last_lambda[2]) - 1.0) < 1e-6) {
+          term_cnt += 1;
+      }
+      else{
+          term_cnt = 0;
+      }
+  }
+
+  sigma = last_lambda[0] / last_lambda[1];
 
 }
 
@@ -118,8 +192,54 @@ double ReferencePoint::rescale( vector<double>& a ) {
     return max_value;
 }
 
+vector< pair<double, double> > ReferencePoint::SingleModeFrequencyResponse(double omega) {
+/*
+    cout << "Frequency: " << omega << endl;
+    cout << "Electric potential: L2 = " << mPotentialL2 << ", sigma = " << mPotentialSigma << ", num of lambdas = " << mPotentialLambda.size() << endl;
+    cout << "Txx      potential: L2 = " << mTxxL2       << ", sigma = " << mTxxSigma       << ", num of lambdas = " << mTxxLambda.size() << endl;
+    cout << "Tyy      potential: L2 = " << mTyyL2       << ", sigma = " << mTyySigma       << ", num of lambdas = " << mTyyLambda.size() << endl;
+    cout << "Tzz      potential: L2 = " << mTzzL2       << ", sigma = " << mTzzSigma       << ", num of lambdas = " << mTzzLambda.size() << endl;
+*/
 
-pair<double, double> ReferencePoint::SingleModeFrequencyResponse(double omega) {
+    pair<double, double> electric_potential = singleModeFrequencyResponse( omega, mPotentialL2, mPotentialSigma, mPotentialLambda );
+
+    pair<double, double> Txx_potential = singleModeFrequencyResponse( omega, mTxxL2, mTxxSigma, mTxxLambda );
+    pair<double, double> Tyy_potential = singleModeFrequencyResponse( omega, mTyyL2, mTyySigma, mTyyLambda );
+    pair<double, double> Tzz_potential = singleModeFrequencyResponse( omega, mTzzL2, mTzzSigma, mTzzLambda );
+
+    Txx_potential.first  += Tyy_potential.first  + Tzz_potential.first ;
+    Txx_potential.second += Tyy_potential.second + Tzz_potential.second;
+
+    vector< pair<double, double> > complex_potentials;
+    complex_potentials.push_back( electric_potential );
+    complex_potentials.push_back( Txx_potential      );
+
+    return complex_potentials;
+}
+
+vector< pair<double, double> > ReferencePoint::DualModeFrequencyResponse(double omega1, double omega2, double mix_ratio) {
+
+  pair<double, double> electric_potential = dualModeFrequencyResponse( omega1, omega2, mix_ratio, mPotentialL2, mPotentialSigma, mPotentialLambda );
+
+  pair<double, double> Txx_potential = dualModeFrequencyResponse( omega1, omega2, mix_ratio, mTxxL2, mTxxSigma, mTxxLambda );
+  pair<double, double> Tyy_potential = dualModeFrequencyResponse( omega1, omega2, mix_ratio, mTyyL2, mTyySigma, mTyyLambda );
+  pair<double, double> Tzz_potential = dualModeFrequencyResponse( omega1, omega2, mix_ratio, mTzzL2, mTzzSigma, mTzzLambda );
+
+  Txx_potential.first  += Tyy_potential.first  + Tzz_potential.first ;
+  Txx_potential.second += Tyy_potential.second + Tzz_potential.second;
+
+  vector< pair<double, double> > complex_potentials;
+  complex_potentials.push_back( electric_potential );
+  complex_potentials.push_back( Txx_potential      );
+
+  return complex_potentials;
+}
+
+
+
+
+
+pair<double, double> ReferencePoint::singleModeFrequencyResponse(double omega, double l2, double sigma, vector<double>& lambda) {
     pair<double, double> complex_response(0.0, 0.0);
 
     vector<double> four_by_four(16, 0.0);
@@ -134,16 +254,16 @@ pair<double, double> ReferencePoint::SingleModeFrequencyResponse(double omega) {
     double *r_ptr = &param_1_value;
 
     // initialize
-    four_by_four[ 2] =  mSigma;             four_by_four[ 3] = omega; four_by_four[ 6] = -four_by_four[ 3]; four_by_four[ 7] = four_by_four[ 2];
-    four_by_four[ 8] =  mLambda[0];         four_by_four[ 9] = omega; four_by_four[12] = -four_by_four[ 9]; four_by_four[13] = four_by_four[ 8];
-    four_by_four[10] = *(mLambda.rbegin());                                                                 four_by_four[15] = four_by_four[10];
+    four_by_four[ 2] =  sigma;             four_by_four[ 3] = omega; four_by_four[ 6] = -four_by_four[ 3]; four_by_four[ 7] = four_by_four[ 2];
+    four_by_four[ 8] =  lambda[0];         four_by_four[ 9] = omega; four_by_four[12] = -four_by_four[ 9]; four_by_four[13] = four_by_four[ 8];
+    four_by_four[10] = *(lambda.rbegin());                                                                 four_by_four[15] = four_by_four[10];
 
     solution_vector[0] = 1.0;
 
     // iterate
     double tmp_value;
-    for(int cnt = 0; cnt < static_cast<int>(mLambda.size() - 1); ++cnt) {
-        tmp_value = mLambda[cnt+1] / omega;
+    for(int cnt = 0; cnt < static_cast<int>(lambda.size() - 1); ++cnt) {
+        tmp_value = lambda[cnt+1] / omega;
         if( r_ptr == &param_1_value ) {
             four_by_four[12] -= tmp_value * param_1_value;
             four_by_four[ 9] += tmp_value * param_2_value;
@@ -175,13 +295,13 @@ pair<double, double> ReferencePoint::SingleModeFrequencyResponse(double omega) {
     // solve for alpha, beta
     double alpha = 0.0;
     double beta  = 0.0;
-    partialSolver(four_by_four, solution_vector, &alpha, &beta);
+    partialSolver(four_by_four, solution_vector, l2, &alpha, &beta);
 
     complex_response.first  = alpha;
     complex_response.second =  beta;
     return complex_response;
 }
-pair<double, double> ReferencePoint::DualModeFrequencyResponse(double omega1, double omega2, double mix_ratio) {
+pair<double, double> ReferencePoint::dualModeFrequencyResponse(double omega1, double omega2, double mix_ratio, double l2, double sigma, vector<double>& lambda) {
     pair<double, double> complex_response(0.0, 0.0);
 
     double omega_plus = omega1 + omega2;
@@ -207,18 +327,18 @@ pair<double, double> ReferencePoint::DualModeFrequencyResponse(double omega1, do
     int lowest_index;
 
     // initialize
-    six_by_six[ 4] = mSigma*mSigma - omega_prod;                  six_by_six[ 5] = omega_plus*mSigma;              six_by_six[10] = -six_by_six[ 5]; six_by_six[11] = six_by_six[ 4];
-    six_by_six[12] = mLambda[0];                                  six_by_six[13] = omega_plus;                     six_by_six[18] = -six_by_six[13]; six_by_six[19] = six_by_six[12];
-    six_by_six[14] = mLambda[1] - omega_prod;                                                                                                        six_by_six[21] = six_by_six[14];
-    six_by_six[16] = *(mLambda.rbegin());                                                                                                            six_by_six[23] = six_by_six[16];
-    six_by_six[24] = mLambda[0]*mLambda[0]+mLambda[1]-omega_prod; six_by_six[25] = omega_plus*mLambda[0];          six_by_six[30] = -six_by_six[25]; six_by_six[31] = six_by_six[24];
-    six_by_six[26] = mLambda[0]*mLambda[1]+mLambda[2];            six_by_six[27] = omega_plus*mLambda[1];          six_by_six[32] = -six_by_six[27]; six_by_six[33] = six_by_six[26];
-    six_by_six[28] = *(mLambda.rbegin())*(mLambda[0]+mSigma);     six_by_six[29] = *(mLambda.rbegin())*omega_plus; six_by_six[34] = -six_by_six[29]; six_by_six[35] = six_by_six[28];
+    six_by_six[ 4] = sigma*sigma - omega_prod;                 six_by_six[ 5] = omega_plus*sigma;              six_by_six[10] = -six_by_six[ 5]; six_by_six[11] = six_by_six[ 4];
+    six_by_six[12] = lambda[0];                                six_by_six[13] = omega_plus;                    six_by_six[18] = -six_by_six[13]; six_by_six[19] = six_by_six[12];
+    six_by_six[14] = lambda[1] - omega_prod;                                                                                                     six_by_six[21] = six_by_six[14];
+    six_by_six[16] = *(lambda.rbegin());                                                                                                         six_by_six[23] = six_by_six[16];
+    six_by_six[24] = lambda[0]*lambda[0]+lambda[1]-omega_prod; six_by_six[25] = omega_plus*lambda[0];          six_by_six[30] = -six_by_six[25]; six_by_six[31] = six_by_six[24];
+    six_by_six[26] = lambda[0]*lambda[1]+lambda[2];            six_by_six[27] = omega_plus*lambda[1];          six_by_six[32] = -six_by_six[27]; six_by_six[33] = six_by_six[26];
+    six_by_six[28] = *(lambda.rbegin())*(lambda[0]+sigma);     six_by_six[29] = *(lambda.rbegin())*omega_plus; six_by_six[34] = -six_by_six[29]; six_by_six[35] = six_by_six[28];
 
-    solution_vector[0] = mLambda[0];
+    solution_vector[0] = lambda[0];
     solution_vector[1] = omega_bar;
-    solution_vector[2] = mLambda[1];
-    solution_vector[4] = *(mLambda.rbegin());
+    solution_vector[2] = lambda[1];
+    solution_vector[4] = *(lambda.rbegin());
 
     r_1[0] = 1.0; r_1[3] =  omega_plus;
     s_1[1] = 1.0; s_1[2] = -omega_plus;
@@ -231,15 +351,15 @@ pair<double, double> ReferencePoint::DualModeFrequencyResponse(double omega1, do
     double bb1, bb2, v0, v1, v2;
     v2  = 1.0 / omega_prod;
     v1  = omega_plus / omega_prod;
-    for(int cnt = 1; cnt < static_cast<int>(mLambda.size() - 1); ++cnt) {
-        if(cnt == static_cast<int>(mLambda.size() - 2)) {
-            bb1 = (mLambda[0] + mSigma) * mLambda[cnt+1] * v2;
+    for(int cnt = 1; cnt < static_cast<int>(lambda.size() - 1); ++cnt) {
+        if(cnt == static_cast<int>(lambda.size() - 2)) {
+            bb1 = (lambda[0] + sigma) * lambda[cnt+1] * v2;
         }
         else {
-            bb1 = (mLambda[0]*mLambda[cnt+1] + mLambda[cnt+2]) * v2;
+            bb1 = (lambda[0]*lambda[cnt+1] + lambda[cnt+2]) * v2;
         }
-        bb2 = mLambda[cnt+1] * v1;
-        v0  = mLambda[cnt+1] * v2;
+        bb2 = lambda[cnt+1] * v1;
+        v0  = lambda[cnt+1] * v2;
 
         if(lowest_index == 0) {
             six_by_six[24] += r_0[0] * bb1; six_by_six[25] += r_0[1] * bb1; six_by_six[26] += r_0[2] * bb1; six_by_six[27] += r_0[3] * bb1;
@@ -301,29 +421,29 @@ pair<double, double> ReferencePoint::DualModeFrequencyResponse(double omega1, do
     }
 
     if(lowest_index == 0) {
-        six_by_six[0] += r_0[0] + mSigma * r_1[0]; six_by_six[1] += r_0[1] + mSigma * r_1[1]; six_by_six[2] += r_0[2] + mSigma * r_1[2]; six_by_six[3] += r_0[3] + mSigma * r_1[3];
-        six_by_six[6] += s_0[0] + mSigma * s_1[0]; six_by_six[7] += s_0[1] + mSigma * s_1[1]; six_by_six[8] += s_0[2] + mSigma * s_1[2]; six_by_six[9] += s_0[3] + mSigma * s_1[3];
+        six_by_six[0] += r_0[0] + sigma * r_1[0]; six_by_six[1] += r_0[1] + sigma * r_1[1]; six_by_six[2] += r_0[2] + sigma * r_1[2]; six_by_six[3] += r_0[3] + sigma * r_1[3];
+        six_by_six[6] += s_0[0] + sigma * s_1[0]; six_by_six[7] += s_0[1] + sigma * s_1[1]; six_by_six[8] += s_0[2] + sigma * s_1[2]; six_by_six[9] += s_0[3] + sigma * s_1[3];
     }
     else if(lowest_index == 1) {
-        six_by_six[0] += r_1[0] + mSigma * r_2[0]; six_by_six[1] += r_1[1] + mSigma * r_2[1]; six_by_six[2] += r_1[2] + mSigma * r_2[2]; six_by_six[3] += r_1[3] + mSigma * r_2[3];
-        six_by_six[6] += s_1[0] + mSigma * s_2[0]; six_by_six[7] += s_1[1] + mSigma * s_2[1]; six_by_six[8] += s_1[2] + mSigma * s_2[2]; six_by_six[9] += s_1[3] + mSigma * s_2[3];
+        six_by_six[0] += r_1[0] + sigma * r_2[0]; six_by_six[1] += r_1[1] + sigma * r_2[1]; six_by_six[2] += r_1[2] + sigma * r_2[2]; six_by_six[3] += r_1[3] + sigma * r_2[3];
+        six_by_six[6] += s_1[0] + sigma * s_2[0]; six_by_six[7] += s_1[1] + sigma * s_2[1]; six_by_six[8] += s_1[2] + sigma * s_2[2]; six_by_six[9] += s_1[3] + sigma * s_2[3];
     }
     else {
-        six_by_six[0] += r_2[0] + mSigma * r_0[0]; six_by_six[1] += r_2[1] + mSigma * r_0[1]; six_by_six[2] += r_2[2] + mSigma * r_0[2]; six_by_six[3] += r_2[3] + mSigma * r_0[3];
-        six_by_six[6] += s_2[0] + mSigma * s_0[0]; six_by_six[7] += s_2[1] + mSigma * s_0[1]; six_by_six[8] += s_2[2] + mSigma * s_0[2]; six_by_six[9] += s_2[3] + mSigma * s_0[3];
+        six_by_six[0] += r_2[0] + sigma * r_0[0]; six_by_six[1] += r_2[1] + sigma * r_0[1]; six_by_six[2] += r_2[2] + sigma * r_0[2]; six_by_six[3] += r_2[3] + sigma * r_0[3];
+        six_by_six[6] += s_2[0] + sigma * s_0[0]; six_by_six[7] += s_2[1] + sigma * s_0[1]; six_by_six[8] += s_2[2] + sigma * s_0[2]; six_by_six[9] += s_2[3] + sigma * s_0[3];
     }
 
     // solve for alpha, beta
     double alpha = 0.0;
     double beta  = 0.0;
-    partialSolver(six_by_six, solution_vector, &alpha, &beta);
+    partialSolver(six_by_six, solution_vector, l2, &alpha, &beta);
 
     complex_response.first  = alpha;
     complex_response.second =  beta;
     return complex_response;
 }
 
-void ReferencePoint::partialSolver(vector<double>& A, vector<double>& b, double *alpha, double *beta) {
+void ReferencePoint::partialSolver(vector<double>& A, vector<double>& b, double l2, double *alpha, double *beta) {
     int length = static_cast<int>(b.size());
 
     // Forward elimination
@@ -343,11 +463,11 @@ void ReferencePoint::partialSolver(vector<double>& A, vector<double>& b, double 
             // swap rows
             double tmp;
             for(int i = cnt; i < length; ++i) {
-                double col = i * length;
+                double cc = i * length;
 
-                tmp = A[col + cnt];
-                A[col + cnt] = A[col + max_index];
-                A[col + max_index] = tmp;
+                tmp = A[cc + cnt];
+                A[cc + cnt] = A[cc + max_index];
+                A[cc + max_index] = tmp;
             }
             tmp = b[cnt];
             b[cnt] = b[max_index];
@@ -359,7 +479,7 @@ void ReferencePoint::partialSolver(vector<double>& A, vector<double>& b, double 
             double multiplier = -A[column + row] / A[column + cnt];
 
             A[column + row] = 0.0;
-            for(int col = cnt + 1; cnt < length; ++col) {
+            for(int col = cnt + 1; col < length; ++col) {
                 A[col * length + row] += multiplier * A[col * length + cnt];
             }
 
@@ -370,19 +490,9 @@ void ReferencePoint::partialSolver(vector<double>& A, vector<double>& b, double 
     // Solve 2 x 2
     int index1 = length-2;
     int index2 = length-1;
-    double scalar = mBTb / (A[index1 * length + index1] * A[index2 * length + index2] - A[index1 * length + index2] * A[index2 * length + index1]);
+
+    double scalar = l2 / (A[index1 * length + index1] * A[index2 * length + index2] -
+                          A[index1 * length + index2] * A[index2 * length + index1]);
     *alpha = (  A[index2 * length + index2] * b[index1] - A[index2 * length + index1] * b[index2] ) * scalar;
     *beta  = ( -A[index1 * length + index2] * b[index1] + A[index1 * length + index1] * b[index2] ) * scalar;
-}
-
-
-void ReferencePoint::Print() {
-    cout << "Reference position: (" << mPosition[0]
-         << ", " << mPosition[1]
-         << ", " << mPosition[2] << ")" << endl;
-    cout << "Potential magnitude (bTb) = " << mBTb << endl;
-    for(int cnt = 0; cnt < static_cast<int>(mLambda.size()); ++cnt) {
-        cout << "Lambda[" << cnt << "] = " << mLambda[cnt] << endl;
-    }
-    cout << "Sigma = " << mSigma << endl;
 }

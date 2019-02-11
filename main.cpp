@@ -5,6 +5,7 @@
 #include <exception>
 
 #include <map>
+#include <vector>
 
 #include "ElasticNetworkModel.h"
 #include "util/CSVRead.h"
@@ -66,12 +67,23 @@ int main(int argc,char **argv)
     try {
         networkModel.IdentifyContacts();
         networkModel.ConstructLinearResponse();
+
+        int ref_node_index = networkModel.AddReferencePoint( 0.0, 0.0, 0.0 );
+
+        vector< pair<double, double> > complex_potential1 = networkModel.SingleModeFrequencyResponse(ref_node_index, 1.0);
+        cout << "Electric potential result = " << complex_potential1[0].first << " + " << complex_potential1[0].second << " i " << endl;
+        cout << "Dipole potential result = " << complex_potential1[1].first << " + " << complex_potential1[1].second << " i " << endl;
+
+        vector< pair<double, double> > complex_potential2 = networkModel.DualModeFrequencyResponse(ref_node_index, 1.0, .3, 0.5);
+        cout << "Electric potential result = " << complex_potential2[0].first << " + " << complex_potential2[0].second << " i " << endl;
+        cout << "Dipole potential result = " << complex_potential2[1].first << " + " << complex_potential2[1].second << " i " << endl;
+
     }
     catch (const char* msg) {
         cerr << msg << endl;
     }
 
-	return 1;
+	  return 1;
 }
 
 

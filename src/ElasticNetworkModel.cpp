@@ -31,6 +31,30 @@ ElasticNetworkModel::~ElasticNetworkModel(){
 
 }
 
+int ElasticNetworkModel::AddReferencePoint( double x, double y, double z ) {
+    int index = static_cast<int>( mReferencePoints.size() );
+    mReferencePoints.push_back( ReferencePoint(x, y, z, mNodes, mHessianMatrix) );
+
+    return index;
+}
+
+vector< pair<double, double> > ElasticNetworkModel::SingleModeFrequencyResponse(int ref_index, double omega) {
+    vector< pair<double, double> > complex_potential;
+    if( ref_index < 0 || ref_index >= static_cast<int>( mReferencePoints.size() ) )
+        return complex_potential;
+
+    complex_potential = mReferencePoints[ref_index].SingleModeFrequencyResponse(omega);
+    return complex_potential;
+}
+vector< pair<double, double> > ElasticNetworkModel::DualModeFrequencyResponse(int ref_index, double omega1, double omega2, double a) {
+    vector< pair<double, double> > complex_potential;
+    if( ref_index < 0 || ref_index >= static_cast<int>( mReferencePoints.size() ) )
+        return complex_potential;
+
+    complex_potential = mReferencePoints[ref_index].DualModeFrequencyResponse(omega1, omega2, a);
+    return complex_potential;
+}
+
 void ElasticNetworkModel::SetNodeType(string node_type) {
     if(node_type.compare("alpha_carbon") == 0) {
         mParameter.SetNodeType( CommonType::NodeType::ALPHA_CARBON );
@@ -274,14 +298,6 @@ void ElasticNetworkModel::ConstructLinearResponse() {
     for(Connection conn : it->second) {
       mHessianMatrix.SetConnection(conn.GetNodeId2(), conn.GetNodeId1(), conn.GetSeparation(), conn.GetSpringConstant());
     }
-  }
-
-  mReferencePoints.push_back( ReferencePoint(0.0, 0.0, 0.0) );
-
-  for(auto rp : mReferencePoints) {
-      rp.BuildPotential(mNodes, mHessianMatrix);
-
-      rp.Print();
   }
 }
 

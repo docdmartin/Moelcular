@@ -36,6 +36,10 @@ public:
     void ConstructLinearResponse();
     void SetConstantVector(vector<double>& b);
 
+    int  AddReferencePoint( double x, double y, double z );
+    vector< pair<double, double> > SingleModeFrequencyResponse(int, double);
+    vector< pair<double, double> > DualModeFrequencyResponse(int, double, double, double );
+
     void Print();
 
 private:
