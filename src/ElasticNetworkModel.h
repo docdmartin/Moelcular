@@ -11,6 +11,7 @@
 #include "network_model/Node.h"
 #include "network_model/HessianMatrix.h"
 #include "network_model/ReferencePoint.h"
+#include "network_model/NullSpace.h"
 #include "util/CommonType.h"
 #include "util/Common.h"
 
@@ -40,6 +41,10 @@ public:
     vector< pair<double, double> > SingleModeFrequencyResponse(int, double);
     vector< pair<double, double> > DualModeFrequencyResponse(int, double, double, double );
 
+    vector<Node>& GetNodes() { return mNodes; }
+
+    void ConfigureModel();
+
     void Print();
 
 private:
@@ -63,6 +68,8 @@ private:
     double mPosY;
     double mPosZ;
     double mEstQ;
+
+    NullSpace mNullSpace;
 
     vector<ReferencePoint> mReferencePoints;
 

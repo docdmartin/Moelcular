@@ -1,6 +1,7 @@
 #include "network_model/HessianMatrix.h"
 
 HessianMatrix::HessianMatrix(){
+  mNullSpacePtr = nullptr;
 }
 
 HessianMatrix::~HessianMatrix(){
@@ -31,6 +32,10 @@ void HessianMatrix::MultiplyMatrix(vector<double>& x, vector<double>& b) {
             b[op.mNodeIndex1+cnt] += tmp;
             b[op.mNodeIndex2+cnt] -= tmp;
         }
+    }
+
+    if(mNullSpacePtr != nullptr) {
+      mNullSpacePtr->RemoveProjection( b );
     }
 }
 

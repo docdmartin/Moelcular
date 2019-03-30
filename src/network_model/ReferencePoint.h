@@ -7,12 +7,13 @@
 #include "network_model/Node.h"
 #include "network_model/HessianMatrix.h"
 
+
 using namespace std;
 
 class ReferencePoint{
 public:
-    ReferencePoint(double x, double y, double z, vector<Node> &, HessianMatrix &);
-    ReferencePoint(const ReferencePoint& rp);
+    ReferencePoint(double x, double y, double z, vector<Node> &, HessianMatrix & );
+    ReferencePoint(const ReferencePoint& rp );
     ~ReferencePoint();
 
     vector< pair<double, double> > SingleModeFrequencyResponse(double omega);
@@ -70,6 +71,7 @@ private:
     double         mTzzL2;
     double         mTzzSigma;
     vector<double> mTzzLambda;
+
 };
 
 #endif

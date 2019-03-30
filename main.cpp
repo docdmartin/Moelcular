@@ -63,6 +63,8 @@ int main(int argc,char **argv)
     }
     loadNetworkModel( it->second );
 
+    networkModel.ConfigureModel();
+
 
     try {
         networkModel.IdentifyContacts();
@@ -77,7 +79,6 @@ int main(int argc,char **argv)
         vector< pair<double, double> > complex_potential2 = networkModel.DualModeFrequencyResponse(ref_node_index, 1.0, .3, 0.5);
         cout << "Electric potential result = " << complex_potential2[0].first << " + " << complex_potential2[0].second << " i " << endl;
         cout << "Dipole potential result = " << complex_potential2[1].first << " + " << complex_potential2[1].second << " i " << endl;
-
     }
     catch (const char* msg) {
         cerr << msg << endl;

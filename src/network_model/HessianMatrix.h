@@ -4,12 +4,16 @@
 #include <iostream>
 #include <vector>
 
+#include "network_model/NullSpace.h"
+
 using namespace std;
 
 class HessianMatrix{
 public:
     HessianMatrix();
     ~HessianMatrix();
+
+    void AddNullSpace( NullSpace* np ) { mNullSpacePtr = np; }
 
     void SetConnection(int, int, vector<double>, double);
     void MultiplyMatrix(vector<double>&, vector<double>&);
@@ -30,6 +34,7 @@ private:
 
     vector<OuterProduct> mHessianMatrix;
 
+    NullSpace* mNullSpacePtr;
 };
 
 #endif

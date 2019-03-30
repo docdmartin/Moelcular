@@ -8,6 +8,7 @@ SOURCES=main.cpp \
 		src/network_model/Node.cpp \
 		src/network_model/HessianMatrix.cpp \
 		src/network_model/ReferencePoint.cpp \
+		src/network_model/NullSpace.cpp \
     src/util/CSVRead.cpp \
 		src/util/Common.cpp
 

@@ -31,6 +31,11 @@ ElasticNetworkModel::~ElasticNetworkModel(){
 
 }
 
+void ElasticNetworkModel::ConfigureModel() {
+  mNullSpace.CreateEigenVectors( mNodes );
+  mHessianMatrix.AddNullSpace( &mNullSpace );
+}
+
 int ElasticNetworkModel::AddReferencePoint( double x, double y, double z ) {
     int index = static_cast<int>( mReferencePoints.size() );
     mReferencePoints.push_back( ReferencePoint(x, y, z, mNodes, mHessianMatrix) );
