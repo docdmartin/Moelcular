@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <dirent.h>
 #include <exception>
@@ -10,12 +11,16 @@
 #include "ElasticNetworkModel.h"
 #include "util/CSVRead.h"
 
+#include "WriteVTU.h"
+
 using namespace std;
 
 void loadConfigurationFile(string configurationFile);
 void loadNetworkModel     (string proteinFolderName);
 int  countAminoAcid       (string input_file, string chain_name);
 void loadAminoAcid        (string input_file, string chain_name);
+
+void constructVtu( vector<string>&, vector<double>&, vector<double>&, vector<double>&, int&, vector<vector<double>>&, vector<vector<int>>& );
 
 ElasticNetworkModel networkModel;
 map<string, string> configurationMap;
@@ -70,15 +75,25 @@ int main(int argc,char **argv)
         networkModel.IdentifyContacts();
         networkModel.ConstructLinearResponse();
 
-        int ref_node_index = networkModel.AddReferencePoint( 0.0, 0.0, 0.0 );
+        networkModel.Print();
+        //return 0;
+
+        int ref_node_index = networkModel.AddReferencePoint( -14.167, 4.687, -0.717 );
+        cout << endl << endl;
+        networkModel.PrintRefPoint( ref_node_index );
+        cout << endl;
 
         vector< pair<double, double> > complex_potential1 = networkModel.SingleModeFrequencyResponse(ref_node_index, 1.0);
-        cout << "Electric potential result = " << complex_potential1[0].first << " + " << complex_potential1[0].second << " i " << endl;
-        cout << "Dipole potential result = " << complex_potential1[1].first << " + " << complex_potential1[1].second << " i " << endl;
+        cout << "Using single frequency: 1.0" << endl;
+        cout << "Electric potential result = " << setw(6) << setprecision(4) << complex_potential1[0].first << " + " << setw(6) << complex_potential1[0].second << " i " << endl;
+        cout << "Dipole   potential result = " << setw(6) << complex_potential1[1].first << " + " << setw(6) << complex_potential1[1].second << " i " << endl << endl;
 
-        vector< pair<double, double> > complex_potential2 = networkModel.DualModeFrequencyResponse(ref_node_index, 1.0, .3, 0.5);
-        cout << "Electric potential result = " << complex_potential2[0].first << " + " << complex_potential2[0].second << " i " << endl;
-        cout << "Dipole potential result = " << complex_potential2[1].first << " + " << complex_potential2[1].second << " i " << endl;
+        // vector< pair<double, double> > complex_potential2 = networkModel.DualModeFrequencyResponse(ref_node_index, 1.0, .3, 0.5);
+        // cout << "Using dual frequency: 1.0 and 0.3 with mixture of 0.5" << endl;
+        // cout << "Electric potential result = " << setw(6) << complex_potential2[0].first << " + " << setw(6) << complex_potential2[0].second << " i " << endl;
+        // cout << "Dipole   potential result = " << setw(6) << complex_potential2[1].first << " + " << setw(6) << complex_potential2[1].second << " i " << endl << endl;
+
+
     }
     catch (const char* msg) {
         cerr << msg << endl;
@@ -201,6 +216,9 @@ int countAminoAcid(string input_file, string chain_name) {
 void loadAminoAcid(string input_file, string chain_name) {
 
     cout << "Loading " << chain_name << " from file: " << input_file << endl;
+    vector< vector<double> > vtu_points;
+    vector< vector<int> >    vtu_connections;
+    int prev_ca = -1;
 
     CSVRead network_file;
 
@@ -254,6 +272,8 @@ void loadAminoAcid(string input_file, string chain_name) {
             int prev_node_index = node_index;
             node_index          = networkModel.AddNode(resid, resname, atomid, atomname, x, y, z, q);
 
+            constructVtu( atomname, x, y, z, prev_ca, vtu_points, vtu_connections );
+
             if(node_index < 0)
                 throw "Process terminated due to error";
 
@@ -277,7 +297,49 @@ void loadAminoAcid(string input_file, string chain_name) {
         int prev_node_index = node_index;
         node_index          = networkModel.AddNode(resid, resname, atomid, atomname, x, y, z, q);
 
+        constructVtu( atomname, x, y, z, prev_ca, vtu_points, vtu_connections );
+
         if(prev_node_index >= 0)
             networkModel.CreateBackboneConnection(prev_node_index, node_index);
     }
+
+    string full_filename = chain_name + ".vtu";
+    WriteVTU write_vtu( vtu_points, vtu_connections );
+    write_vtu.WriteVTUFile( full_filename );
+}
+
+void constructVtu( vector<string>& atomname, vector<double>& x, vector<double>& y, vector<double>& z, int& prev_ca, vector<vector<double>>& pnts, vector<vector<int>>& cnct ) {
+  int ca_index = -1;
+  int cnt = -1;
+  for( string name : atomname ) {
+    ++cnt;
+    if( name.compare("CA") == 0 ) {
+      ca_index = cnt;
+      break;
+    }
+  }
+
+  if( ca_index < 0 ) {
+    prev_ca = -1;
+cout << "No alpha carbon found" << endl;
+    return;
+  }
+
+  ca_index += static_cast<int>( pnts.size() );
+  if( prev_ca > 0 ) {
+    cnct.push_back( vector<int>{prev_ca, ca_index} );
+  }
+  else{
+  cout << "No backbone link" << endl;
+  }
+  prev_ca = ca_index;
+
+  for( cnt = 0; cnt < static_cast<int>(x.size()); ++cnt ){
+    int index = static_cast<int>( pnts.size() );
+    if( index != ca_index ) {
+      cnct.push_back( vector<int>{index, ca_index} );
+    }
+
+    pnts.push_back( vector<double>{x[cnt], y[cnt], z[cnt]} );
+  }
 }

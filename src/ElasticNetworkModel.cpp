@@ -135,8 +135,10 @@ bool ElasticNetworkModel::calculateNodeProperties(
                 mPosX  += atom_pos_x[cnt];
                 mPosY  += atom_pos_y[cnt];
                 mPosZ  += atom_pos_z[cnt];
+
+                mEstQ  += atom_q[cnt];
             }
-            mEstQ  += atom_q[cnt];
+            //mEstQ  += atom_q[cnt];
         }
         break;
 
@@ -392,14 +394,15 @@ void ElasticNetworkModel::Print() {
   for(auto node : mNodes)
     node.Print();
 
-    return;
+//    return;
 
   cout << "Connections" << endl;
   for(map<CommonType::ConnectionType, vector<Connection>>::iterator it = mConnections.begin(); it != mConnections.end(); ++it)
     for(auto conn : it->second)
       conn.Print();
 
-  mHessianMatrix.PrintMatrixA();
+  mHessianMatrix.PrintHessian();
+  //mHessianMatrix.PrintMatrixA();
 
 return;
 

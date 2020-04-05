@@ -41,6 +41,8 @@ public:
     void   AddConnection(CommonType::ConnectionType, int);
     bool   IsConnected(int, CommonType::ConnectionType);
 
+    vector<double> GetElectricPotential( vector<double>& probe_loc );
+
 
     void Print();
 

@@ -12,10 +12,11 @@ Common::~Common(){
 void Common::SetVariables() {
       mNodeType = NodeType::UNDEFINED;
 
-      mConnectionStrength[CommonType::NO_CONNECTION ] =  0.0;
-      mConnectionStrength[CommonType::SPRING_LEVEL_1] = 10.0;
-      mConnectionStrength[CommonType::SPRING_LEVEL_2] =  1.0;
-      mConnectionStrength[CommonType::ALL_CONNECTION] =  1.0;
+      mConnectionStrength[CommonType::NO_CONNECTION ] =   0.0;
+      mConnectionStrength[CommonType::ALL_CONNECTION] =   1.0;
+      mConnectionStrength[CommonType::SPRING_LEVEL_1] = 100.0 * mConnectionStrength[CommonType::ALL_CONNECTION];
+      mConnectionStrength[CommonType::SPRING_LEVEL_2] =         mConnectionStrength[CommonType::ALL_CONNECTION];
+
 
       mNodeTypeDef[NodeType::UNDEFINED         ] = "Undefined";
       mNodeTypeDef[NodeType::ALPHA_CARBON      ] = "Alpha Carbon";

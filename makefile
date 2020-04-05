@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-c -std=c++11 -o -O3 -Wall -Isrc
+CFLAGS=-c -std=c++11 -o -g -Wall -Isrc
 LDFLAGS=
 HEADER = src/util/CommonType.h
 SOURCES=main.cpp \

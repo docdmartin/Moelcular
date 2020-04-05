@@ -1,4 +1,4 @@
 ParameterName,ParameterValue
-MaxSpringLength,6.00
+MaxSpringLength,15.00
 ProteinFolderName,/home/mnelson/Molecular/Molecular/database/lys
-NodeType,mass_weighted,alpha_carbon
+NodeType,alpha_carbon,mass_weighted

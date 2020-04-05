@@ -14,11 +14,13 @@ public:
     ~HessianMatrix();
 
     void AddNullSpace( NullSpace* np ) { mNullSpacePtr = np; }
+    void RemoveProjection( vector<double>& a ) { if( mNullSpacePtr != nullptr ){ mNullSpacePtr->RemoveProjection( a ); } }
 
     void SetConnection(int, int, vector<double>, double);
     void MultiplyMatrix(vector<double>&, vector<double>&);
 
     void PrintMatrixA();
+    void PrintHessian();
 
 private:
     struct OuterProduct {

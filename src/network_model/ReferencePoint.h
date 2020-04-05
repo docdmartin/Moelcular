@@ -37,6 +37,8 @@ public:
     double         GetTzzSigma () const { return mTzzSigma ; }
     vector<double> GetTzzLambda() const { return mTzzLambda; }
 
+    void Print();
+
 private:
     void   preCompute  ( vector<Node> &, HessianMatrix & );
 

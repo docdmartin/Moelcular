@@ -1,4 +1,5 @@
 #include <iomanip>
+#include <cmath>
 
 #include "network_model/Node.h"
 
@@ -85,6 +86,33 @@ bool Node::IsConnected(int id, CommonType::ConnectionType ct) {
     return false;
 
   return true;
+}
+
+
+vector<double> Node::GetElectricPotential( vector<double>& probe_loc ){
+  vector<double> elec_potential = {0.0, 0.0, 0.0};
+
+  for(int cnt = 0; cnt < static_cast<int>(mAtomCharge.size()); ++cnt){
+    double dx = probe_loc[0] - mAtomPosX[cnt];
+    double dy = probe_loc[1] - mAtomPosY[cnt];
+    double dz = probe_loc[2] - mAtomPosZ[cnt];
+
+    if( dx == 0.0 && dy == 0.0 && dz == 0.0 ){
+      elec_potential[0] = 0.0;
+      elec_potential[1] = 0.0;
+      elec_potential[2] = 0.0;
+
+      return elec_potential;
+    }
+
+    double potential_constant = 332.063 * mAtomCharge[cnt] * pow(dx*dx + dy*dy + dz*dz, -1.5);
+
+    elec_potential[0] += dx * potential_constant;
+    elec_potential[1] += dy * potential_constant;
+    elec_potential[2] += dz * potential_constant;
+  }
+
+  return elec_potential;
 }
 
 

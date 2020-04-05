@@ -46,6 +46,7 @@ public:
     void ConfigureModel();
 
     void Print();
+    void PrintRefPoint(int index) { if(index >= 0 && index < static_cast<int>(mReferencePoints.size())){ mReferencePoints[index].Print(); } }
 
 private:
     void addConnection(CommonType::ConnectionType, Node&, Node&);

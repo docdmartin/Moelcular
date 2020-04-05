@@ -1,4 +1,5 @@
 #include <cmath>
+#include <fstream>
 
 #include "network_model/ReferencePoint.h"
 
@@ -59,11 +60,37 @@ void ReferencePoint::preCompute(vector<Node> &nodes, HessianMatrix &hessianMatri
     dipoleTensorZ    .reserve( 3 * nodes.size() );
 
     for(auto node : nodes) {
-        double q = node.GetQ();
+        vector<double> ep = node.GetElectricPotential( mPosition );
+        electricPotential.push_back( ep[0] );
+        electricPotential.push_back( ep[1] );
+        electricPotential.push_back( ep[2] );
+
+        //double q = node.GetQ();
 
         double dx = mPosition[0] - node.GetX();
         double dy = mPosition[1] - node.GetY();
         double dz = mPosition[2] - node.GetZ();
+
+        if(dx == 0.0 && dy == 0.0 && dz == 0.0){
+          cout << node.GetID() << " is the probe point" << endl;
+          // electricPotential.push_back( 0.0 );
+          // electricPotential.push_back( 0.0 );
+          // electricPotential.push_back( 0.0 );
+
+          dipoleTensorX.push_back( 0.0 );
+          dipoleTensorX.push_back( 0.0 );
+          dipoleTensorX.push_back( 0.0 );
+
+          dipoleTensorY.push_back( 0.0 );
+          dipoleTensorY.push_back( 0.0 );
+          dipoleTensorY.push_back( 0.0 );
+
+          dipoleTensorZ.push_back( 0.0 );
+          dipoleTensorZ.push_back( 0.0 );
+          dipoleTensorZ.push_back( 0.0 );
+
+          continue;
+        }
 
         double dx_sq = dx*dx;
         double dy_sq = dy*dy;
@@ -72,14 +99,14 @@ void ReferencePoint::preCompute(vector<Node> &nodes, HessianMatrix &hessianMatri
         double r     = sqrt( r_sq );
 
         double dipole_constant    = r * r_sq;
-        double potential_constant = q   / dipole_constant;
+    //    double potential_constant = q   / dipole_constant;
         dipole_constant           = dipole_constant * r_sq;
         double diag_constant      = r_sq / dipole_constant;
         dipole_constant           = -3.0 / dipole_constant;
-
-        electricPotential.push_back( dx * potential_constant );
-        electricPotential.push_back( dy * potential_constant );
-        electricPotential.push_back( dz * potential_constant );
+//cout << "Parts of potential: " << dx * potential_constant << " " << dy * potential_constant << " " << dz * potential_constant << endl;
+        // electricPotential.push_back( dx * potential_constant );
+        // electricPotential.push_back( dy * potential_constant );
+        // electricPotential.push_back( dz * potential_constant );
 
         dipoleTensorX.push_back( diag_constant + dx_sq * dipole_constant );
         double yy              = diag_constant + dy_sq * dipole_constant;
@@ -100,19 +127,78 @@ void ReferencePoint::preCompute(vector<Node> &nodes, HessianMatrix &hessianMatri
         dipoleTensorZ.push_back( tmp_xz );
         dipoleTensorZ.push_back( tmp_yz );
         dipoleTensorZ.push_back( zz );
-
     }
 
+    fstream fs;
+    fs.open ("ElectricPotential.txt", std::fstream::out );
+
+    for(int cnt = 0; cnt < static_cast<int>(electricPotential.size()); cnt+=3)
+      fs << electricPotential[cnt] << " " << electricPotential[cnt+1] << " " << electricPotential[cnt+2] << endl;
+
+    fs.close();
+
+    hessianMatrix.RemoveProjection( electricPotential );
+
     calculateFrequencyTerms( electricPotential, mPotentialL2, mPotentialSigma, mPotentialLambda, nodes, hessianMatrix );
-    calculateFrequencyTerms( dipoleTensorX    , mTxxL2      , mTxxSigma      , mTxxLambda      , nodes, hessianMatrix );
-    calculateFrequencyTerms( dipoleTensorY    , mTyyL2      , mTyySigma      , mTyyLambda      , nodes, hessianMatrix );
-    calculateFrequencyTerms( dipoleTensorZ    , mTzzL2      , mTzzSigma      , mTzzLambda      , nodes, hessianMatrix );
+//    calculateFrequencyTerms( dipoleTensorX    , mTxxL2      , mTxxSigma      , mTxxLambda      , nodes, hessianMatrix );
+//    calculateFrequencyTerms( dipoleTensorY    , mTyyL2      , mTyySigma      , mTyyLambda      , nodes, hessianMatrix );
+//    calculateFrequencyTerms( dipoleTensorZ    , mTzzL2      , mTzzSigma      , mTzzLambda      , nodes, hessianMatrix );
 }
 
 
-void ReferencePoint::calculateFrequencyTerms(vector<double>& b_vector, double& bT_b, double& sigma, vector<double>& lambda, vector<Node> &nodes, HessianMatrix &hessianMatrix ) {
+void ReferencePoint::calculateFrequencyTerms(
+  vector<double>& b_vector,
+  double        & bT_b, 
+  double        & sigma,
+  vector<double>& lambda,
+  vector<Node>  & nodes,
+  HessianMatrix & hessianMatrix ) {
+
+  vector<double> input_vec;
+  vector<double> output_vec;
+  input_vec .resize( b_vector.size() );
+  output_vec.resize( b_vector.size() );
 
   bT_b = innerProduct(b_vector, b_vector);
+  double mu = sqrt( bT_b );
+  vector<double> u_hat;
+  u_hat.resize( b_vector.size() );
+  for(int cnt = 0; cnt < static_cast<int>(b_vector.size()); ++cnt){
+    u_hat[cnt] = b_vector[cnt] / mu;
+
+    input_vec [cnt] = u_hat[cnt];
+    output_vec[cnt] = 0.0;
+  }
+
+
+  for(int cnt = 0; cnt < 100; ++cnt){
+    hessianMatrix.MultiplyMatrix(input_vec, output_vec);
+
+    double tmp_lambda = 0.0;
+    for(int cnt = 0; cnt < static_cast<int>(b_vector.size()); ++cnt){
+      tmp_lambda += output_vec[cnt] * u_hat[cnt];
+    }
+    double tmp_sigma = 0.0;
+    for(int cnt = 0; cnt < static_cast<int>(b_vector.size()); ++cnt){
+      input_vec[cnt] = output_vec[cnt] - tmp_lambda * u_hat[cnt];
+      output_vec[cnt] = 0.0;
+      tmp_sigma += input_vec[cnt] * input_vec[cnt];
+    }
+    tmp_sigma = sqrt( tmp_sigma );
+    double unit_test = 0.0;
+    for(int cnt = 0; cnt < static_cast<int>(b_vector.size()); ++cnt){
+      input_vec[cnt] /= tmp_sigma;
+      unit_test += input_vec[cnt] * input_vec[cnt];
+    }
+
+    cout << "Lambda = " << tmp_lambda << ", sigma = " << tmp_sigma << ", unit test: " << unit_test << endl;;
+  }
+
+
+
+
+
+
 
   vector<double> result;
   result.resize( 3 * nodes.size() );
@@ -128,24 +214,34 @@ void ReferencePoint::calculateFrequencyTerms(vector<double>& b_vector, double& b
 
   int cnt      = 0;
   int term_cnt = 0;
-  while( term_cnt < 2 ) {
+  while( term_cnt < 2         && cnt < 20 ) {
       last_lambda[2] = *(lambda.rbegin());
-
+//cout << result[0] << " -> ";
       // Two steps per loop to address ping-pong of vectors
       grahamSchmit( result, b_vector, *(lambda.rbegin()) );
+//  cout << result[0] << " -> ";
       scalar_value = rescale( result );
+//  cout << result[0] << " -> ";
       hessianMatrix.MultiplyMatrix(result, result2);
+//  cout << result[0] << " -> " << result2[0] << endl;
+//  cout << cnt << " : " << scalar_value << ", " << innerProduct(b_vector, result2) << endl;
       lambda.push_back( scalar_value * innerProduct(b_vector, result2) / bT_b );
       last_lambda[1] = *(lambda.rbegin());
-
+//cout << result2[0] << " -> ";
       grahamSchmit( result2, b_vector, *(lambda.rbegin()) );
+//  cout << result2[0] << " -> ";
       scalar_value = rescale( result2 );
+//  cout << result2[0] << " -> ";
       hessianMatrix.MultiplyMatrix(result2, result);
+//  cout << result2[0] << " -> " << result[0] << endl;
+//  cout << cnt+1 << " : " << scalar_value << ", " << innerProduct(b_vector, result) << endl;
       lambda.push_back( scalar_value * innerProduct(b_vector, result) / bT_b );
       last_lambda[0] = *(lambda.rbegin());
 
+//      cout << "\tLambdas: " << last_lambda[0] << " " << last_lambda[1] << " " << last_lambda[2] << endl;
+
       cnt += 2;
-      if(cnt < 10)
+      if(cnt < 20)
           continue;
 
       if(fabs( (last_lambda[1]*last_lambda[1])/(last_lambda[0]*last_lambda[2]) - 1.0) < 1e-6) {
@@ -155,6 +251,8 @@ void ReferencePoint::calculateFrequencyTerms(vector<double>& b_vector, double& b
           term_cnt = 0;
       }
   }
+//  cout << "Iterative convergence was achieved in " << cnt << " iterations" << endl;
+//  cout << "\tLambdas: " << last_lambda[0] << " " << last_lambda[1] << " " << last_lambda[2] << endl;
 
   sigma = last_lambda[0] / last_lambda[1];
 
@@ -495,4 +593,9 @@ void ReferencePoint::partialSolver(vector<double>& A, vector<double>& b, double 
                           A[index1 * length + index2] * A[index2 * length + index1]);
     *alpha = (  A[index2 * length + index2] * b[index1] - A[index2 * length + index1] * b[index2] ) * scalar;
     *beta  = ( -A[index1 * length + index2] * b[index1] + A[index1 * length + index1] * b[index2] ) * scalar;
+}
+
+
+void ReferencePoint::Print() {
+  cout << "Reference node located at ( " << mPosition[0] << ", " << mPosition[1] << ", " << mPosition[2] << " )" << endl;
 }
