@@ -1,345 +1,196 @@
-#include <string>
 #include <iostream>
-#include <iomanip>
+#include <sstream>
 #include <fstream>
-#include <dirent.h>
-#include <exception>
-
-#include <map>
+#include <iomanip>
+#include <string>
 #include <vector>
+#include <map>
+#include <set>
+#include <cmath>
+#include "dirent.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-#include "ElasticNetworkModel.h"
-#include "util/CSVRead.h"
+#include "Common.h"
+#include "GlobalMaps.h"
+#include "EnumToString.h"
+#include "StringToEnum.h"
 
-#include "WriteVTU.h"
+
+#include "Atom.h"
+#include "Node.h"
+#include "Matrix3x3.h"
+#include "CSVRead.h"
+#include "Solver.h"
 
 using namespace std;
 
-void loadConfigurationFile(string configurationFile);
-void loadNetworkModel     (string proteinFolderName);
-int  countAminoAcid       (string input_file, string chain_name);
-void loadAminoAcid        (string input_file, string chain_name);
-
-void constructVtu( vector<string>&, vector<double>&, vector<double>&, vector<double>&, int&, vector<vector<double>>&, vector<vector<int>>& );
-
-ElasticNetworkModel networkModel;
-map<string, string> configurationMap;
 
 int main(int argc,char **argv)
 {
-    if(argc == 1){
-        cout << "Configuration file must be included on command line." << endl;
-        cout << "> " << argv[0] << " pathname/filename" << endl;
+  (void) argc;
+  (void) argv;
+  try {
 
-        return 1;
-    }
+    vector<Node> node_array;
+    vector<Atom> atom_array;
+    map< pair<size_t, size_t>, double > link_map;
 
-    string filename = argv[1];
+    string input_file = "./lys_P1.csv";
+    {
+      CSVRead network_file;
 
-    string executable_file = argv[0];
-    size_t botDirPos = executable_file.find_last_of("/");
-    string current_working_dir = executable_file.substr(0, botDirPos+1);
-    cout << "Local directory: " << current_working_dir << endl;
-
-
-    loadConfigurationFile( filename );
-
-
-    map<string, string>::iterator it = configurationMap.find("MaxSpringLength");
-    if(it == configurationMap.end()) {
-        cout << "Configuration file did not include: MaxSpringLength" << endl;
-        return 0;
-    }
-    networkModel.SetMaxSpringLength( atof( it->second.c_str() ) );
-
-
-    it = configurationMap.find("NodeType");
-    if(it == configurationMap.end()) {
-        cout << "Configuration file did not include: NodeType" << endl;
-        return 0;
-    }
-    networkModel.SetNodeType( it->second );
-
-
-    it = configurationMap.find("ProteinFolderName");
-    if(it == configurationMap.end()) {
-        cout << "Configuration file did not include: ProteinFolderName" << endl;
-        return 0;
-    }
-    loadNetworkModel( it->second );
-
-    networkModel.ConfigureModel();
-
-
-    try {
-        networkModel.IdentifyContacts();
-        networkModel.ConstructLinearResponse();
-
-        networkModel.Print();
-        //return 0;
-
-        int ref_node_index = networkModel.AddReferencePoint( -14.167, 4.687, -0.717 );
-        cout << endl << endl;
-        networkModel.PrintRefPoint( ref_node_index );
-        cout << endl;
-
-        vector< pair<double, double> > complex_potential1 = networkModel.SingleModeFrequencyResponse(ref_node_index, 1.0);
-        cout << "Using single frequency: 1.0" << endl;
-        cout << "Electric potential result = " << setw(6) << setprecision(4) << complex_potential1[0].first << " + " << setw(6) << complex_potential1[0].second << " i " << endl;
-        cout << "Dipole   potential result = " << setw(6) << complex_potential1[1].first << " + " << setw(6) << complex_potential1[1].second << " i " << endl << endl;
-
-        // vector< pair<double, double> > complex_potential2 = networkModel.DualModeFrequencyResponse(ref_node_index, 1.0, .3, 0.5);
-        // cout << "Using dual frequency: 1.0 and 0.3 with mixture of 0.5" << endl;
-        // cout << "Electric potential result = " << setw(6) << complex_potential2[0].first << " + " << setw(6) << complex_potential2[0].second << " i " << endl;
-        // cout << "Dipole   potential result = " << setw(6) << complex_potential2[1].first << " + " << setw(6) << complex_potential2[1].second << " i " << endl << endl;
-
-
-    }
-    catch (const char* msg) {
-        cerr << msg << endl;
-    }
-
-	  return 1;
-}
-
-
-void loadConfigurationFile(string configurationFile){
-
-    CSVRead config_file;
-
-    if(!config_file.OpenCSVFile(configurationFile))
-        throw "Unable to open configuration file";
-
-	  vector<string> config_columns;
-	  int param_name_index  = static_cast<int>(config_columns.size()); config_columns.push_back("ParameterName" );
-	  int param_value_index = static_cast<int>(config_columns.size()); config_columns.push_back("ParameterValue");
-
-	  if(!config_file.ReadCSVHeader(config_columns)) {
-		    throw "Configuration file didn't have correct column headers";
-	  }
-
-	  while(true) {
-		    vector<string> fields = config_file.ReadCSVRecord();
-		    if(fields.size() == 0) {
-			      break;
-		    }
-
-        configurationMap[fields[param_name_index]] = fields[param_value_index];
-
-        cout << "Parameter: " << fields[param_name_index] << ", has value: " << fields[param_value_index] << endl;
-	  }
-}
-
-
-
-void loadNetworkModel(string proteinFolderName) {
-
-    DIR           *dir;
-    struct dirent *ent;
-    if ((dir = opendir (proteinFolderName.c_str())) != NULL) {
-
-        size_t botDirPos   = proteinFolderName.find_last_of("/");
-        string proteinName = proteinFolderName.substr(botDirPos+1, proteinFolderName.size() - botDirPos);
-
-        cout << "Protein name: " << proteinName << endl;
-
-        /* print all the files and directories within directory */
-        int amino_cnt = 0;
-        while ((ent = readdir (dir)) != NULL) {
-            string tmpFileName = ent->d_name;
-
-            if (tmpFileName.compare(0, proteinName.size(), proteinName))
-                continue;
-
-            string chain = tmpFileName.substr(proteinName.size()+1, tmpFileName.size() - proteinName.size() - 5);
-
-            amino_cnt += countAminoAcid(proteinFolderName + "/" + tmpFileName, chain);
-        }
-        closedir (dir);
-
-
-        if(amino_cnt <= 0)
-            throw "No nodes";
-
-        cout << proteinFolderName << " contains a total of " << amino_cnt << " alpha carbons." << endl;
-        networkModel.AllocateNodes( amino_cnt );
-
-
-        /* print all the files and directories within directory */
-        dir = opendir (proteinFolderName.c_str());
-        while ((ent = readdir (dir)) != NULL) {
-            string tmpFileName = ent->d_name;
-
-            if (tmpFileName.compare(0, proteinName.size(), proteinName))
-                continue;
-
-            string chain = tmpFileName.substr(proteinName.size()+1, tmpFileName.size() - proteinName.size() - 5);
-
-            loadAminoAcid(proteinFolderName + "/" + tmpFileName, chain);
-        }
-        closedir (dir);
-
-    }
-}
-
-int countAminoAcid(string input_file, string chain_name) {
-
-    CSVRead network_file;
-
-    if(!network_file.OpenCSVFile(input_file))
+      if(!network_file.OpenCSVFile(input_file))
         throw "Unable to open network file";
 
-    vector<string> network_columns;
-    int name_index   = static_cast<int>(network_columns.size()); network_columns.push_back("ATOMNAME" );
+      vector<string> network_columns;
+      int atom_name_index   = static_cast<int>(network_columns.size()); network_columns.push_back("ATOMNAME" );
+      //int node_name_index   = static_cast<int>(network_columns.size()); network_columns.push_back("RESNAME"  );
+      if(!network_file.ReadCSVHeader(network_columns)) {
+          throw "Network file didn't have correct column headers";
+      }
 
-    if(!network_file.ReadCSVHeader(network_columns)) {
-        throw "Network file didn't have correct column headers";
+      int atom_cnt = 0;
+      int node_cnt = 0;
+      while(true) {
+          vector<string> fields = network_file.ReadCSVRecord();
+          if(fields.size() == 0) {
+              break;
+          }
+
+          // If atom is not alpha carbon then go to next line
+          if(fields[atom_name_index].compare("CA") == 0)
+              ++node_cnt;
+
+          ++atom_cnt;
+      }
+
+      node_array.reserve(node_cnt);
+      atom_array.reserve(atom_cnt);
     }
 
-    int cnt = 0;
-    while(true) {
-        vector<string> fields = network_file.ReadCSVRecord();
-        if(fields.size() == 0) {
-            break;
-        }
+    {
+      CSVRead network_file;
 
-        // If atom is not alpha carbon then go to next line
-        if(fields[name_index].compare("CA") != 0)
-            continue;
+      if(!network_file.OpenCSVFile(input_file))
+          throw "Unable to open network file";
 
-        ++cnt;
+      vector<string> network_columns;
+      int atom_name_index   = static_cast<int>(network_columns.size()); network_columns.push_back("ATOMNAME" );
+      int node_name_index   = static_cast<int>(network_columns.size()); network_columns.push_back("RESNAME"  );
+      int node_id_index     = static_cast<int>(network_columns.size()); network_columns.push_back("RESID"  );
+      int x_index           = static_cast<int>(network_columns.size()); network_columns.push_back("X"  );
+      int y_index           = static_cast<int>(network_columns.size()); network_columns.push_back("Y"  );
+      int z_index           = static_cast<int>(network_columns.size()); network_columns.push_back("Z"  );
+      int q_index           = static_cast<int>(network_columns.size()); network_columns.push_back("Q"  );
+      if(!network_file.ReadCSVHeader(network_columns)) {
+          throw "Network file didn't have correct column headers";
+      }
+
+      while(true) {
+          vector<string> fields = network_file.ReadCSVRecord();
+          if(fields.size() == 0) {
+              break;
+          }
+
+          atom_array.push_back( Atom() );
+          atom_array.back().SetPosition(
+            atof( fields[x_index].c_str() ),
+            atof( fields[y_index].c_str() ),
+            atof( fields[z_index].c_str() ) );
+          atom_array.back().SetCharge(
+            atof( fields[q_index].c_str() ) );
+          atom_array.back().SetName( fields[atom_name_index] );
+
+          if( node_array.empty() || fields[node_id_index] != node_array.back().GetId() ){
+            node_array.push_back( Node() );
+            node_array.back().SetName( fields[node_name_index] );
+            node_array.back().SetId  ( fields[node_id_index] );
+          }
+          if( node_array.size() > 1 ){
+            pair<size_t, size_t> link(node_array.size()-2, node_array.size()-1);
+            link_map.insert( pair<pair<size_t, size_t>, double>(link, 100.0) );
+
+            // quick check for near nodes, link strength 1.0
+            // later this will be done in a hash
+            double* node_pos = node_array.back().GetPosition();
+            double* tmp_node;
+            double dx, dy, dz;
+            for(size_t node_index = 0; node_index < node_array.size()-2; ++node_index){
+              tmp_node = node_array[node_index].GetPosition();
+              dx = *(node_pos  ) - *(tmp_node  );
+              dy = *(node_pos+1) - *(tmp_node+1);
+              dz = *(node_pos+2) - *(tmp_node+2);
+              if( fabs(dx) > 15.0 || fabs(dy) > 15.0 || fabs(dz) > 15.0 )
+                continue;
+
+              if( dx*dx + dy*dy + dz*dz < 225. ){
+                pair<size_t, size_t> link(node_index, node_array.size()-1);
+                link_map.insert( pair<pair<size_t, size_t>, double>(link, 1.0) );
+              }
+            }
+          }
+
+          node_array.back().AddAtom( &(atom_array.back()) );
+
+          // If atom is not alpha carbon then go to next line
+          if( ElementType::C == atom_array.back().GetName() && atom_array.back().GetGreek() == 'A' )
+              node_array.back().SetPosition(
+                atof( fields[x_index].c_str() ),
+                atof( fields[y_index].c_str() ),
+                atof( fields[z_index].c_str() ) );
+      }
     }
 
-    return cnt;
-}
-
-void loadAminoAcid(string input_file, string chain_name) {
-
-    cout << "Loading " << chain_name << " from file: " << input_file << endl;
-    vector< vector<double> > vtu_points;
-    vector< vector<int> >    vtu_connections;
-    int prev_ca = -1;
-
-    CSVRead network_file;
-
-    vector<string> network_columns;
-    int name_index     = static_cast<int>(network_columns.size()); network_columns.push_back("ATOMNAME" );
-    int x_index        = static_cast<int>(network_columns.size()); network_columns.push_back("X");
-    int y_index        = static_cast<int>(network_columns.size()); network_columns.push_back("Y");
-    int z_index        = static_cast<int>(network_columns.size()); network_columns.push_back("Z");
-    int q_index        = static_cast<int>(network_columns.size()); network_columns.push_back("Q");
-    int atom_id_index  = static_cast<int>(network_columns.size()); network_columns.push_back("ID");
-    int resid_index    = static_cast<int>(network_columns.size()); network_columns.push_back("RESID");
-    int res_name_index = static_cast<int>(network_columns.size()); network_columns.push_back("RESNAME");
-
-    if(!network_file.OpenCSVFile(input_file))
-        throw "Unable to open molecular file";
-
-    if(!network_file.ReadCSVHeader(network_columns)) {
-        throw "Molecular file didn't have correct column headers";
+    vector<Matrix3x3> hessian;
+    hessian.reserve(link_map.size());
+    map< pair<size_t, size_t>, double >::iterator it = link_map.begin();
+    for(; it != link_map.end(); ++it){
+      hessian.push_back( Matrix3x3(it->first.first, it->first.second,
+        node_array[it->first.first ].GetPosition(),
+        node_array[it->first.second].GetPosition(), it->second) );
     }
 
-    int            resid  = -1;
-    string         resname;
-    vector<int>    atomid;
-    vector<string> atomname;
-    vector<double> x;
-    vector<double> y;
-    vector<double> z;
-    vector<double> q;
+    // given a probe position generate electric potential
+    double  probe_pos[3] = {-14.167, 4.687, -0.717};
+    double* electric_potential = new double[3*node_array.size()]();
 
-    atomid.clear();
-
-    int node_index = -1;
-    while(true) {
-        vector<string> fields = network_file.ReadCSVRecord();
-        if(fields.size() == 0) {
-            break;
-        }
-
-        if( atoi(fields[resid_index].c_str()) == resid ) {
-            atomid  .push_back( atoi(fields[atom_id_index].c_str()) );
-            atomname.push_back(      fields[name_index   ]          );
-            x       .push_back( atof(fields[x_index      ].c_str()) );
-            y       .push_back( atof(fields[y_index      ].c_str()) );
-            z       .push_back( atof(fields[z_index      ].c_str()) );
-            q       .push_back( atof(fields[q_index      ].c_str()) );
-
-            continue;
-        }
-
-        if(atomid.size() > 0) {
-            int prev_node_index = node_index;
-            node_index          = networkModel.AddNode(resid, resname, atomid, atomname, x, y, z, q);
-
-            constructVtu( atomname, x, y, z, prev_ca, vtu_points, vtu_connections );
-
-            if(node_index < 0)
-                throw "Process terminated due to error";
-
-            if(prev_node_index >= 0)
-                networkModel.CreateBackboneConnection(prev_node_index, node_index);
-        }
-
-        resid   = atoi(fields[resid_index].c_str());
-        resname = fields[res_name_index];
-
-        atomid  .clear(); atomid  .push_back( atoi(fields[atom_id_index].c_str()) );
-        atomname.clear(); atomname.push_back(      fields[name_index   ]          );
-        x       .clear(); x       .push_back( atof(fields[x_index      ].c_str()) );
-        y       .clear(); y       .push_back( atof(fields[y_index      ].c_str()) );
-        z       .clear(); z       .push_back( atof(fields[z_index      ].c_str()) );
-        q       .clear(); q       .push_back( atof(fields[q_index      ].c_str()) );
+    size_t node_index = 0;
+    for( Node& node : node_array ){
+      node.SetElectricPotential( &(electric_potential[node_index]), &(probe_pos[0]) );
+      node_index += 3;
     }
 
-    // Convert last amino acid into a node
-    if(atomid.size() > 0) {
-        int prev_node_index = node_index;
-        node_index          = networkModel.AddNode(resid, resname, atomid, atomname, x, y, z, q);
-
-        constructVtu( atomname, x, y, z, prev_ca, vtu_points, vtu_connections );
-
-        if(prev_node_index >= 0)
-            networkModel.CreateBackboneConnection(prev_node_index, node_index);
+    double freq = 1.0;
+    vector<double> frequency;
+    for(int cnt = 0; cnt < 5; ++cnt){
+      frequency.push_back( freq );
+      freq /= 2.;
     }
 
-    string full_filename = chain_name + ".vtu";
-    WriteVTU write_vtu( vtu_points, vtu_connections );
-    write_vtu.WriteVTUFile( full_filename );
-}
+    Solver solver( 3*node_array.size(), hessian, frequency, electric_potential );
 
-void constructVtu( vector<string>& atomname, vector<double>& x, vector<double>& y, vector<double>& z, int& prev_ca, vector<vector<double>>& pnts, vector<vector<int>>& cnct ) {
-  int ca_index = -1;
-  int cnt = -1;
-  for( string name : atomname ) {
-    ++cnt;
-    if( name.compare("CA") == 0 ) {
-      ca_index = cnt;
-      break;
+    vector<pair<double, double>> response = solver.CalculateResponse();
+
+  //  for( Node& node : node_array ){
+  //    node.Print();
+  //  }
+    cout << "Total number of nodes: " << node_array.size() << endl;
+    cout << "Total number of links: " << link_map.size() << endl;
+
+    for( size_t cnt = 0; cnt < frequency.size(); ++cnt ){
+      cout << "Frquency " << frequency[cnt] << " has response: " << response[cnt].first << " + " << response[cnt].second << " i" << endl;
     }
+
+
+
+    delete[] electric_potential;
+  }
+  catch(string e) {
+	  cout << "Terminating due to error: " << e << endl;
+	  return 1;
   }
 
-  if( ca_index < 0 ) {
-    prev_ca = -1;
-cout << "No alpha carbon found" << endl;
-    return;
-  }
-
-  ca_index += static_cast<int>( pnts.size() );
-  if( prev_ca > 0 ) {
-    cnct.push_back( vector<int>{prev_ca, ca_index} );
-  }
-  else{
-  cout << "No backbone link" << endl;
-  }
-  prev_ca = ca_index;
-
-  for( cnt = 0; cnt < static_cast<int>(x.size()); ++cnt ){
-    int index = static_cast<int>( pnts.size() );
-    if( index != ca_index ) {
-      cnct.push_back( vector<int>{index, ca_index} );
-    }
-
-    pnts.push_back( vector<double>{x[cnt], y[cnt], z[cnt]} );
-  }
+  return 0;
 }

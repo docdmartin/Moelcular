@@ -1,31 +1,10 @@
-#ifndef ____CommonType__
-#define ____CommonType__
+#ifndef _COMMON__
+#define _COMMON__
 
-#include <map>
 #include <string>
+#include <map>
 
-using namespace std;
-
-namespace CommonType {
-  /*
-    ConnectionType must has NO_CONNECTION specified as the first in a list of enum
-    and ALL_CONNECTION as the last. This is important since we iterate over the enum list at times
-  */
-  enum ConnectionType
-  {
-    NO_CONNECTION,
-    SPRING_LEVEL_1,
-    SPRING_LEVEL_2,
-    ALL_CONNECTION
-  };
-
-  enum NodeType{
-    UNDEFINED,
-    ALPHA_CARBON,
-    MASS_WEIGHTED_MEAN
-  };
-
-  enum ElementType{
+enum ElementType{
     e,  //  electron  0.0
     H,  // 	Hydrogen 1.008
     He, // 	Helium 4.002602
@@ -144,9 +123,12 @@ namespace CommonType {
     Mc, // 	Moscovium 290
     Lv, // 	Livermorium 293
     Ts, // 	Tennessine 294
-    Og  // 	Oganesson 294
-  };
-}
+    Og, // 	Oganesson 294
+    ElementSize
+};
 
+extern std::map< std::string, ElementType  > gElementTypeMap;
+extern std::string EnumToString( ElementType  );
+extern void StringToEnum( std::string&, ElementType& );
 
 #endif
