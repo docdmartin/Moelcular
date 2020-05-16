@@ -168,11 +168,11 @@ int main(int argc,char **argv)
 
     kernel.RemoveProjection( electric_potential );
 
-    double freq = 1.0e-3;
+    double freq = 9227.0;//1.0e-3;
     vector<double> frequency;
     for(int cnt = 0; cnt < 200; ++cnt){
       frequency.push_back( freq );
-      freq *= 1.083927675448064;
+      freq /= 1.083927675448064;
     }
 
     Solver solver( 3*node_array.size(), hessian, frequency, electric_potential );

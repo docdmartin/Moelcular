@@ -134,8 +134,8 @@ bool Solver::Solve(){
 	for (size_t curr_iter = 0; curr_iter < mLength+1000; ++curr_iter) {
 		iteration();
 
-    //if( curr_iter < 300 )
-    //  continue;
+    if( curr_iter < 10 )
+      continue;
 
 		// Check to see if this has completed
 		if (threshold < mConvergenceThreshold){
