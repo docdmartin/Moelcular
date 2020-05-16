@@ -43,6 +43,26 @@ Solver::~Solver()
   delete[] mb;
 }
 
+void Solver::Print(){
+  /*
+  for( Matrix3x3& hess : mHessian ){
+    hess.Print();
+  }
+  */
+
+  //double* test_mult = new double[mLength]();
+  //for( Matrix3x3& hess : mHessian ){
+  //  hess.Multiply( test_mult, mElectricPotential );
+  //}
+  for( size_t cnt = 0; cnt < mLength; ++cnt ){
+      cout << " " << mElectricPotential[cnt];
+      if( cnt%3 == 2 )
+      cout << endl;
+  }
+
+  //delete[] test_mult;
+}
+
 
 vector<pair<double, double>> Solver::CalculateResponse()
 {
@@ -55,7 +75,7 @@ vector<pair<double, double>> Solver::CalculateResponse()
   mConvergenceThreshold = 0.0;
   for( size_t cnt = 0; cnt < mLength; ++cnt )
     mConvergenceThreshold += mb[cnt] * mb[cnt];
-  mConvergenceThreshold *= 1e-10;
+  mConvergenceThreshold *= 1e-12;
 
   double r_response, i_response;
   for( double frq : mFrequencyVec ){
@@ -111,15 +131,15 @@ bool Solver::Solve(){
 	omega = 1.0;
 	rho   = 1.0;
 
-	for (size_t curr_iter = 0; curr_iter < mLength+300; ++curr_iter) {
+	for (size_t curr_iter = 0; curr_iter < mLength+1000; ++curr_iter) {
 		iteration();
 
-    if( curr_iter < 300 )
-      continue;
+    //if( curr_iter < 300 )
+    //  continue;
 
 		// Check to see if this has completed
 		if (threshold < mConvergenceThreshold){
-			cout << "Converged to " << threshold << " (< " << mConvergenceThreshold << ") in " << curr_iter+1 << " iterations" << endl;
+//			cout << "Converged to " << threshold << " (< " << mConvergenceThreshold << ") in " << curr_iter+1 << " iterations" << endl;
 
 			return true;
 		}
@@ -151,7 +171,7 @@ void Solver::iteration(){
 
 	beta = omega * rho;
 	if( beta == 0.0 ){ // protect against division by zero
-		throw string("Beta fail");
+		return;//throw string("Beta fail");
 	}
 	a   = &r[0];
 	b   = &r_hat[0];
@@ -179,7 +199,7 @@ void Solver::iteration(){
 			alpha += *(++a) * *(++b);
 	}while(b != r_hat_end);
 	if( alpha == 0.0 ){ // protect against division by zero
-		throw string("Alpha fail");
+		return;//throw string("Alpha fail");
 	}
 	alpha = rho / alpha;
 
@@ -207,7 +227,7 @@ void Solver::iteration(){
 				tt +=   (*b) *   (*b);
 	}while(b != t_end);
 	if( tt == 0.0 ){ // protect against division by zero
-		throw string("Omega fail");
+		return;//throw string("Omega fail");
 	}
 	omega = ts / tt;
 

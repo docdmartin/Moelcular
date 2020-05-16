@@ -61,21 +61,31 @@ public:
     E[0] = 0.; E[1] = 0.; E[2] = 0.;
     double dp[3], c;
     double* p;
-    for( Atom* it = mBegin; it != mEnd; ++it ){
+
+    dp[0] = pos[0] - mPosition[0];
+    dp[1] = pos[1] - mPosition[1];
+    dp[2] = pos[2] - mPosition[2];
+    c = dp[0]*dp[0] + dp[1]*dp[1] + dp[2]*dp[2];
+    if( c < 1e-12 )
+      return;
+
+    for( Atom* it = mBegin; it <= mEnd; ++it ){
       p = (*it).GetPosition();
-      dp[0] = p[0] - pos[0];
-      dp[1] = p[1] - pos[1];
-      dp[2] = p[2] - pos[2];
+      dp[0] = pos[0] - p[0];
+      dp[1] = pos[1] - p[1];
+      dp[2] = pos[2] - p[2];
 
       c = std::sqrt( dp[0]*dp[0] + dp[1]*dp[1] + dp[2]*dp[2] );
-      if( c == 0.0 ) // Probe was placed at location of an atom, atom is being ignored in electric potential
+      if( c < 1e-15 ) // Probe was placed at location of an atom, atom is being ignored in electric potential
        continue;
 
-      c = (*it).GetCharge() / ( c * c * c );
+      c = (*it).GetCharge() / ( c * c * c )   * 332.063182082;
       E[0] += dp[0] * c;
       E[1] += dp[1] * c;
       E[2] += dp[2] * c;
     }
+
+  //  cout << "Force: " << E[0] << ", " << E[1] << ", " << E[2] << endl;
   }
 
 

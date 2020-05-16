@@ -22,6 +22,8 @@ public:
 
   vector<pair<double, double>> CalculateResponse();
 
+  void Print();
+
 private:
 
   bool  Solve             ();

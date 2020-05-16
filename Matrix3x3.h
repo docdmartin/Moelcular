@@ -25,6 +25,7 @@ public:
     double y = p1[1] - p2[1];
     double z = p1[2] - p2[2];
     double mag = std::sqrt( x*x + y*y + z*z );
+    mRange = mag;
     if( mag == 0.0 )
       throw string("Neighboring points have zero magnitude");
     mUnitVector[0] = x / mag;
@@ -39,9 +40,9 @@ public:
   void Multiply( double* b, double* x )
   {
     double dot_prod =
-      mDotVector[0] * ( x[mIndex[0]  ] - x[mIndex[1]  ] ) +
-      mDotVector[1] * ( x[mIndex[0]+1] - x[mIndex[1]+1] ) +
-      mDotVector[2] * ( x[mIndex[0]+2] - x[mIndex[1]+2] );
+      mDotVector[0] * ( x[mIndex[1]  ] - x[mIndex[0]  ] ) +
+      mDotVector[1] * ( x[mIndex[1]+1] - x[mIndex[0]+1] ) +
+      mDotVector[2] * ( x[mIndex[1]+2] - x[mIndex[0]+2] );
 
     double dx = dot_prod * mUnitVector[0];
     double dy = dot_prod * mUnitVector[1];
@@ -56,11 +57,23 @@ public:
     b[mIndex[1]+2] += dz;
   }
 
+  void Print(){
+    if( mIndex[0] != 0 )
+      return;
+
+    cout << "Index: " << mIndex[0] << ", " << mIndex[1] << ", range: " << mRange << ", upper: "
+    << mUnitVector[0] * mDotVector[0] << ", " << mUnitVector[0] * mDotVector[1] << ", " << mUnitVector[0] * mDotVector[2] << ", "
+    << mUnitVector[1] * mDotVector[1] << ", " << mUnitVector[1] * mDotVector[2] << ", "
+    << mUnitVector[2] * mDotVector[2] << endl;
+  }
+
 private:
 
   double      mDotVector[3];
   double      mUnitVector[3];
   size_t      mIndex[2];
+
+  double      mRange;
 
 };
 

@@ -21,6 +21,7 @@
 #include "Atom.h"
 #include "Node.h"
 #include "Matrix3x3.h"
+#include "Kernel.h"
 #include "CSVRead.h"
 #include "Solver.h"
 
@@ -107,28 +108,10 @@ int main(int argc,char **argv)
             node_array.push_back( Node() );
             node_array.back().SetName( fields[node_name_index] );
             node_array.back().SetId  ( fields[node_id_index] );
-          }
-          if( node_array.size() > 1 ){
-            pair<size_t, size_t> link(node_array.size()-2, node_array.size()-1);
-            link_map.insert( pair<pair<size_t, size_t>, double>(link, 100.0) );
 
-            // quick check for near nodes, link strength 1.0
-            // later this will be done in a hash
-            double* node_pos = node_array.back().GetPosition();
-            double* tmp_node;
-            double dx, dy, dz;
-            for(size_t node_index = 0; node_index < node_array.size()-2; ++node_index){
-              tmp_node = node_array[node_index].GetPosition();
-              dx = *(node_pos  ) - *(tmp_node  );
-              dy = *(node_pos+1) - *(tmp_node+1);
-              dz = *(node_pos+2) - *(tmp_node+2);
-              if( fabs(dx) > 15.0 || fabs(dy) > 15.0 || fabs(dz) > 15.0 )
-                continue;
-
-              if( dx*dx + dy*dy + dz*dz < 225. ){
-                pair<size_t, size_t> link(node_index, node_array.size()-1);
-                link_map.insert( pair<pair<size_t, size_t>, double>(link, 1.0) );
-              }
+            if( node_array.size() > 1 ){
+              pair<size_t, size_t> link(node_array.size()-2, node_array.size()-1);
+              link_map.insert( pair<pair<size_t, size_t>, double>(link, 100.0) );
             }
           }
 
@@ -141,7 +124,28 @@ int main(int argc,char **argv)
                 atof( fields[y_index].c_str() ),
                 atof( fields[z_index].c_str() ) );
       }
+
+      double dx, dy, dz;
+      for( size_t node1 = 0; node1 < node_array.size()-2; ++node1 ){
+        double* node1_pos = node_array[node1].GetPosition();
+        for( size_t node2 = node1+2; node2 < node_array.size(); ++node2 ){
+          double* node2_pos = node_array[node2].GetPosition();
+
+          dx = *(node1_pos  ) - *(node2_pos  );
+          dy = *(node1_pos+1) - *(node2_pos+1);
+          dz = *(node1_pos+2) - *(node2_pos+2);
+          if( fabs(dx) > 15.0 || fabs(dy) > 15.0 || fabs(dz) > 15.0 )
+            continue;
+
+          if( dx*dx + dy*dy + dz*dz < 225. ){
+            pair<size_t, size_t> link(node1, node2);
+            link_map.insert( pair<pair<size_t, size_t>, double>(link, 1.0) );
+          }
+        }
+      }
     }
+
+    Kernel kernel( node_array );
 
     vector<Matrix3x3> hessian;
     hessian.reserve(link_map.size());
@@ -162,14 +166,17 @@ int main(int argc,char **argv)
       node_index += 3;
     }
 
-    double freq = 1.0;
+    kernel.RemoveProjection( electric_potential );
+
+    double freq = 1.0e-3;
     vector<double> frequency;
-    for(int cnt = 0; cnt < 5; ++cnt){
+    for(int cnt = 0; cnt < 200; ++cnt){
       frequency.push_back( freq );
-      freq /= 2.;
+      freq *= 1.083927675448064;
     }
 
     Solver solver( 3*node_array.size(), hessian, frequency, electric_potential );
+    //solver.Print();
 
     vector<pair<double, double>> response = solver.CalculateResponse();
 
@@ -180,9 +187,8 @@ int main(int argc,char **argv)
     cout << "Total number of links: " << link_map.size() << endl;
 
     for( size_t cnt = 0; cnt < frequency.size(); ++cnt ){
-      cout << "Frquency " << frequency[cnt] << " has response: " << response[cnt].first << " + " << response[cnt].second << " i" << endl;
+      cout << "Frequency " << frequency[cnt] << " has response: " << response[cnt].first << " + " << response[cnt].second << " i" << endl;
     }
-
 
 
     delete[] electric_potential;
