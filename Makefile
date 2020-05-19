@@ -1,11 +1,12 @@
 CC=clang
 OPTIMIZATION=-O3
 CFLAGS=-c -std=c++11 -Wall -Wextra -Werror -Wredundant-decls -Isrc
-LDFLAGS= -L/usr/lib -lstdc++ -lm -pthread
+LDFLAGS= -L/usr/lib -lstdc++ -lm -pthread -lsqlite3
 SOURCES=main.cpp \
     Atom.cpp \
 		CSVRead.cpp \
-		Solver.cpp
+		Solver.cpp \
+		SQLite.cpp
 
 OBJECTS=$(SOURCES:.cpp=.o)
 
@@ -20,12 +21,12 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(CFLAGS) $< $(OPTIMIZATION) -o $@
 
 debug: CFLAGS += -DDEBUG -g -Wcast-align -Wmissing-declarations -Wredundant-decls -Wswitch-default -Winvalid-pch -Wformat=2 -Wmissing-format-attribute -Wformat-nonliteral #-Werror=misleading-indentation
-debug: OPTIMIZATION = -g
+debug: OPTIMIZATION = -g -lsqlite3
 debug: CC = g++
 debug: all
 
 release: CFLAGS += -O3
-release: OPTIMIZATION = -O3
+release: OPTIMIZATION = -O3 -lsqlite3
 release: CC = g++
 release: all
 

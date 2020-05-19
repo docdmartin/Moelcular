@@ -20,4 +20,6 @@ void Atom::SetName( string& name ){
 
   string tmp(1, first_letter);
   StringToEnum( tmp, mName );
+
+
 }

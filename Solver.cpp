@@ -2,7 +2,7 @@
 
 using namespace std;
 
-Solver::Solver( size_t n, vector<Matrix3x3>& hessian, vector<double> frequency, double* electric_potential ):mHessian(hessian)
+Solver::Solver( size_t n, vector<Matrix3x3>& hessian, vector<double> frequency, double* electric_potential, Kernel& kernel ):mHessian(hessian), mKernel(kernel)
 {
   mLength            = n;
   mFrequencyVec      = frequency;
@@ -22,6 +22,7 @@ Solver::Solver( size_t n, vector<Matrix3x3>& hessian, vector<double> frequency, 
   real_response    = new double[mLength]();
   imag_response    = new double[mLength]();
   mb               = new double[mLength]();
+  mAb              = new double[mLength]();
 
   r_hat_end = &r_hat[mLength - 1];
   t_end     = &t    [mLength - 1];
@@ -41,6 +42,7 @@ Solver::~Solver()
   delete[] real_response;
   delete[] imag_response;
   delete[] mb;
+  delete[] mAb;
 }
 
 void Solver::Print(){
@@ -64,41 +66,83 @@ void Solver::Print(){
 }
 
 
-vector<pair<double, double>> Solver::CalculateResponse()
+vector<pair<double, double>> Solver::CalculateResponse( double weight )
 {
+  solve_response = real_response;
+  for( size_t cnt = 0; cnt < mLength; ++cnt )
+    mAb[cnt] = 0.0;
   for( Matrix3x3& hess : mHessian ){
-    hess.Multiply( mb, mElectricPotential );
+    hess.Multiply( mAb, mElectricPotential );
   }
+
+  mConvergenceThreshold = 0.0;
+  for( size_t cnt = 0; cnt < mLength; ++cnt ){
+    mb[cnt] = mAb[cnt];
+    mConvergenceThreshold += mb[cnt] * mb[cnt];
+  }
+  mConvergenceThreshold *= 1e-12;
 
   vector<pair<double, double>> response;
 
-  mConvergenceThreshold = 0.0;
-  for( size_t cnt = 0; cnt < mLength; ++cnt )
-    mConvergenceThreshold += mb[cnt] * mb[cnt];
-  mConvergenceThreshold *= 1e-12;
-
   double r_response, i_response;
   for( double frq : mFrequencyVec ){
-    mFrequency = frq;
-    mFreqSq = mFrequency * mFrequency;
+/*
+    for( size_t cnt = 0; cnt < mLength; ++cnt ){
+      r_hat[cnt] = 0.0;
+      r 	 [cnt] = 0.0;
+      v 	 [cnt] = 0.0;
+      p 	 [cnt] = 0.0;
+      h 	 [cnt] = 0.0;
+      s 	 [cnt] = 0.0;
+      t 	 [cnt] = 0.0;
+
+      intermediate_vec[cnt] = 0.0;
+      imag_response   [cnt] = 0.0;
+    }
+*/
+
+    mFrequency = frq        * weight;
+    mFreqSq    = mFrequency * mFrequency;
 
     Solve();
 
-    for( size_t cnt = 0; cnt < mLength; ++cnt )
-      imag_response[cnt] = 0.0;
-    for( Matrix3x3& hess : mHessian ){
-      hess.Multiply( imag_response, real_response );
+    if( mFrequency >= 1.0 ){
+      for( size_t cnt = 0; cnt < mLength; ++cnt )
+        imag_response[cnt] = 0.0;
+      for( Matrix3x3& hess : mHessian ){
+        hess.Multiply( imag_response, real_response );
+      }
+      for( size_t cnt = 0; cnt < mLength; ++cnt )
+        imag_response[cnt] -= mElectricPotential[cnt];
+    }
+    else{
+      solve_response = imag_response;
+
+      double tmp_threshold = mConvergenceThreshold;
+      mConvergenceThreshold = 0.0;
+      for( size_t cnt = 0; cnt < mLength; ++cnt ){
+        mb[cnt] = -mFrequency * mElectricPotential[cnt];
+        mConvergenceThreshold += mb[cnt] * mb[cnt];
+      }
+      mConvergenceThreshold *= 1e-6;
+
+      Solve();
+
+      for( size_t cnt = 0; cnt < mLength; ++cnt ){
+        mb[cnt] = mAb[cnt];
+      }
+      solve_response        = real_response;
+      mConvergenceThreshold = tmp_threshold;
     }
 
     r_response = 0.0;
     i_response = 0.0;
     for( size_t cnt = 0; cnt < mLength; ++cnt ){
-      imag_response[cnt] -= mElectricPotential[cnt];
-
       r_response += mElectricPotential[cnt] * real_response[cnt];
       i_response += mElectricPotential[cnt] * imag_response[cnt];
     }
-    i_response /= mFrequency;
+    if( mFrequency >= 1.0 )
+      i_response /= mFrequency;
 
     response.push_back( pair<double, double>(r_response, i_response) );
   }
@@ -106,9 +150,27 @@ vector<pair<double, double>> Solver::CalculateResponse()
   return response;
 }
 
-bool Solver::Solve(){
+void Solver::Reset(){
+  for( size_t cnt = 0; cnt < mLength; ++cnt ){
+    r_hat[cnt] = 0.0;
+    r 	 [cnt] = 0.0;
+    v 	 [cnt] = 0.0;
+    p 	 [cnt] = 0.0;
+    h 	 [cnt] = 0.0;
+    s 	 [cnt] = 0.0;
+    t 	 [cnt] = 0.0;
 
-  RealMatrixMultiply( real_response, v );
+    intermediate_vec[cnt] = 0.0;
+    real_response   [cnt] = 0.0;
+    imag_response   [cnt] = 0.0;
+    mb              [cnt] = 0.0;
+  }
+}
+
+bool Solver::Solve(){
+  (void) mKernel;
+
+  RealMatrixMultiply( solve_response, v );
 
 	threshold = 0.0;
 	for (size_t cnt = 0; cnt < mLength; ++cnt) {
@@ -116,13 +178,18 @@ bool Solver::Solve(){
 			r_hat[cnt] = r[cnt];
 			v    [cnt] = 0.;
 			p    [cnt] = 0.;
+      h 	 [cnt] = 0.0;
+      s 	 [cnt] = 0.0;
+      t 	 [cnt] = 0.0;
+
+  //    imag_response[cnt] = 0.0;
 
 			threshold += r[cnt] * r[cnt];
 	}
 
 	if(mConvergenceThreshold == 0.0){
 		for( size_t cnt = 0; cnt < mLength; ++cnt )
-			real_response[cnt] = 0.0;
+			solve_response[cnt] = 0.0;
 
 		return true;
 	}
@@ -133,6 +200,9 @@ bool Solver::Solve(){
 
 	for (size_t curr_iter = 0; curr_iter < mLength+1000; ++curr_iter) {
 		iteration();
+
+//    mKernel.RemoveProjection( r );
+//    mKernel.RemoveProjection( solve_response );
 
     if( curr_iter < 10 )
       continue;
@@ -206,7 +276,7 @@ void Solver::iteration(){
 	a     = &h[0];
 	b     = &p[0];
 	c     = &v[0];
-	d     = &real_response[0];
+	d     = &solve_response[0];
 	g     = &s[0];
 	f     = &r[0];
 	*a = *d + alpha * *b;
@@ -234,7 +304,7 @@ void Solver::iteration(){
 	a  = &h[0];
 	b  = &t[0];
 	c  = &r[0];
-	d  = &real_response[0];
+	d  = &solve_response[0];
 	g  = &s[0];
 	*d = *a + omega * *g;
 	*c = *g - omega * *b;

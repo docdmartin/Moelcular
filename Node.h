@@ -79,13 +79,15 @@ public:
       if( c < 1e-15 ) // Probe was placed at location of an atom, atom is being ignored in electric potential
        continue;
 
-      c = (*it).GetCharge() / ( c * c * c )   * 332.063182082;
+      c = (*it).GetCharge() / ( c * c * c );
       E[0] += dp[0] * c;
       E[1] += dp[1] * c;
       E[2] += dp[2] * c;
     }
+  }
 
-  //  cout << "Force: " << E[0] << ", " << E[1] << ", " << E[2] << endl;
+  string& GetSegment(){
+    return mBegin->GetSegment();
   }
 
 

@@ -29,6 +29,13 @@ public:
 
   char GetGreek() { return mGreek; }
 
+  void SetMass(double m) { mMass = m; }
+  void SetSegment(string& s) { mSegment = s; }
+  void SetResId( string& s ) { mResId = s; }
+
+  string& GetSegment() { return mSegment; }
+  string& GetResId  () { return mResId  ; }
+
   void Print(){
     cout << EnumToString( mName ) << " with charge = " << mCharge
          << " at location: (" << mPosition[0] << ", " << mPosition[1] << ", " << mPosition[2] << ")" << endl;
@@ -40,6 +47,10 @@ private:
   double      mCharge;
   ElementType mName;
   char        mGreek;
+
+  double      mMass;
+  string      mSegment;
+  string      mResId;
 
 };
 
